@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Admin · Panel de Administración</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.14.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ============================================
+   CC ADMIN — Variables de diseño
+   ============================================ */
+:root {
+  --bg0:#ffffff; --bg1:#f5f4ef; --bg2:#eceae3;
+  --tx0:#1c1c1a; --tx1:#5f5f5a; --tx2:#9b9990;
+  --bd:rgba(0,0,0,0.1); --bd2:rgba(0,0,0,0.18);
+  --blue:#185FA5; --blue-lt:#E6F1FB; --blue-dk:#0C447C;
+  --green:#1D9E75; --green-lt:#EAF3DE; --green-dk:#085041;
+  --amber:#EF9F27; --amber-lt:#FAEEDA; --amber-dk:#633806;
+  --red:#E24B4A; --red-lt:#FCEBEB; --red-dk:#791F1F;
+  --purple:#7F77DD; --purple-lt:#EEEDFE; --purple-dk:#3C3489;
+  --gray:#B4B2A9; --r-md:8px; --r-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg0:#1c1c1a; --bg1:#252521; --bg2:#2e2e2a;
+    --tx0:#e8e6df; --tx1:#9b9990; --tx2:#5f5f5a;
+    --bd:rgba(255,255,255,0.1); --bd2:rgba(255,255,255,0.2);
+    --blue-lt:#0c2a45; --green-lt:#0a2b1e;
+    --amber-lt:#2d1f06; --red-lt:#2d0f0f; --purple-lt:#1a1842;
+    --blue-dk:#85B7EB; --green-dk:#5DCAA5;
+    --amber-dk:#FAC775; --red-dk:#F09595; --purple-dk:#AFA9EC;
+  }
+}
+
+/* ============================================
+   Reset y base
+   ============================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;font-size:13px;color:var(--tx0);background:var(--bg1)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* ============================================
+   Layout principal
+   ============================================ */
+.app{display:grid;grid-template-columns:185px 1fr;min-height:100vh}
+.sidebar{background:var(--bg0);border-right:0.5px solid var(--bd);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{display:flex;flex-direction:column}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+.brand{padding:14px;border-bottom:0.5px solid var(--bd);display:flex;align-items:center;gap:9px}
+.brand-ico{width:30px;height:30px;border-radius:8px;background:var(--blue);display:grid;place-items:center;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:500}
+.brand-sub{font-size:10px;color:var(--tx1)}
+.edificio-sel{padding:8px 12px;border-bottom:0.5px solid var(--bd)}
+.edificio-sel select{width:100%;font-size:11px;padding:5px 8px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);cursor:pointer;outline:none}
+.nav{flex:1;padding:8px}
+.nav-sect{font-size:10px;color:var(--tx2);padding:8px 8px 4px;letter-spacing:.06em;font-weight:500}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);cursor:pointer;font-size:12px;color:var(--tx1);margin-bottom:1px;transition:all .12s;user-select:none}
+.ni:hover{background:var(--bg1);color:var(--tx0)}
+.ni.on{background:var(--blue-lt);color:var(--blue-dk);font-weight:500}
+.ni i{font-size:15px;flex-shrink:0}
+.ni-badge{margin-left:auto;background:var(--red-lt);color:var(--red-dk);font-size:9px;padding:1px 5px;border-radius:8px}
+.sb-stats{padding:10px 14px;border-top:0.5px solid var(--bd)}
+.sb-stat{margin-bottom:7px}
+.sb-stat-row{display:flex;justify-content:space-between;font-size:10px;color:var(--tx1);margin-bottom:3px}
+.sb-stat-val{font-weight:500;color:var(--tx0)}
+.prog{height:4px;border-radius:2px;background:var(--bd);overflow:hidden}
+.pf{height:4px;border-radius:2px;transition:width .4s}
+.sb-user{padding:10px 14px;border-top:0.5px solid var(--bd);display:flex;align-items:center;gap:8px}
+.sb-av{width:26px;height:26px;border-radius:50%;background:var(--blue-lt);display:grid;place-items:center;font-size:10px;font-weight:500;color:var(--blue-dk);flex-shrink:0}
+
+/* ============================================
+   Topbar
+   ============================================ */
+.topbar{background:var(--bg0);border-bottom:0.5px solid var(--bd);padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.tb-title{font-size:13px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-search{border:0.5px solid var(--bd2);border-radius:var(--r-md);padding:5px 10px;font-size:12px;width:180px;background:var(--bg1);color:var(--tx0);outline:none;transition:border-color .15s}
+.tb-search:focus{border-color:var(--blue)}
+.ib{width:28px;height:28px;border-radius:var(--r-md);border:0.5px solid var(--bd);display:grid;place-items:center;cursor:pointer;color:var(--tx1);background:transparent;position:relative;flex-shrink:0;font-size:15px;transition:background .12s}
+.ib:hover{background:var(--bg1)}
+.ndot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg0)}
+.av{width:28px;height:28px;border-radius:50%;background:var(--blue-lt);display:grid;place-items:center;font-size:10px;font-weight:500;color:var(--blue-dk);flex-shrink:0}
+.conn-pill{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.conn-ok{background:var(--green-lt);color:var(--green-dk)}
+.conn-off{background:var(--amber-lt);color:var(--amber-dk)}
+
+/* ============================================
+   Contenido
+   ============================================ */
+.content{padding:12px;display:flex;flex-direction:column;gap:12px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kc{border-radius:var(--r-lg);padding:12px 14px;position:relative;overflow:hidden}
+.kc-lbl{font-size:10px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.kc-val{font-size:19px;font-weight:500;line-height:1}
+.kc-sub{font-size:10px;margin-top:4px}
+.kc-ico{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:30px;opacity:.15}
+
+/* Cards */
+.card{background:var(--bg0);border:0.5px solid var(--bd);border-radius:var(--r-lg);padding:12px 14px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ct{font-size:12px;font-weight:500}
+.ci{font-size:15px;color:var(--tx1);cursor:pointer;padding:3px;border-radius:5px}
+.ci:hover{background:var(--bg1)}
+
+/* Tags */
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.t-g{background:var(--green-lt);color:var(--green-dk)}
+.t-y{background:var(--amber-lt);color:var(--amber-dk)}
+.t-r{background:var(--red-lt);color:var(--red-dk)}
+.t-b{background:var(--blue-lt);color:var(--blue-dk)}
+.t-n{background:var(--bg2);color:var(--tx1)}
+
+/* Grids */
+.g3{display:grid;grid-template-columns:minmax(0,45fr) minmax(0,32fr) minmax(0,23fr);gap:10px;align-items:start}
+.g3b{display:grid;grid-template-columns:minmax(0,35fr) minmax(0,35fr) minmax(0,30fr);gap:10px;align-items:start}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+
+/* Tabs / filtros */
+.ftabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.ftab{font-size:11px;padding:4px 10px;border-radius:var(--r-md);border:0.5px solid var(--bd);background:transparent;color:var(--tx1);cursor:pointer;transition:all .12s}
+.ftab.on{background:var(--blue-lt);color:var(--blue-dk);border-color:transparent}
+
+/* ============================================
+   Mapa de pisos
+   ============================================ */
+.fl-lbl{font-size:10px;font-weight:500;color:var(--tx1);margin:7px 0 3px;display:flex;justify-content:space-between}
+.fl-lbl:first-child{margin-top:0}
+.fl-g{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.sc{height:28px;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;transition:opacity .12s;user-select:none}
+.sc:hover{opacity:.7;outline:1.5px solid rgba(0,0,0,.3);outline-offset:-1px}
+.se{height:28px;background:var(--bg2);border-radius:3px}
+.leg{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx1)}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.stip{border-radius:var(--r-md);padding:7px 10px;font-size:11px;margin-top:8px;display:none;border:0.5px solid var(--bd2)}
+
+/* ============================================
+   Semáforo GC
+   ============================================ */
+.sem-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r-md);border:0.5px solid var(--bd);cursor:pointer;transition:background .12s;margin-bottom:4px}
+.sem-row:hover{background:var(--bg1)}
+.sem-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+.sem-name{flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sem-monto{font-size:11px;color:var(--tx1);min-width:55px;text-align:right;flex-shrink:0}
+
+/* ============================================
+   Estacionamiento
+   ============================================ */
+.park-g{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-bottom:8px}
+.ps{height:22px;border-radius:3px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:500}
+.ps-f{background:#EAF3DE;color:#085041;border:0.5px solid #5DCAA5}
+.ps-o{background:#FCEBEB;color:#791F1F;border:0.5px solid #F09595}
+.ps-r{background:#E6F1FB;color:#042C53;border:0.5px solid #85B7EB}
+
+/* ============================================
+   Detalle local
+   ============================================ */
+.dp-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--bd);font-size:12px}
+.dp-row:last-child{border-bottom:none}
+.dp-k{color:var(--tx1)}
+
+/* ============================================
+   Mantenimiento
+   ============================================ */
+.mc{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--bd)}
+.mc:last-of-type{border-bottom:none}
+.mc-d{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+.tk-r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--bd);font-size:11px}
+.tk-r:last-child{border-bottom:none}
+.tk-h{font-size:10px;color:var(--tx1);font-weight:500;margin:8px 0 4px;padding-bottom:4px;border-bottom:0.5px solid var(--bd)}
+.bar-t{background:var(--bd);border-radius:3px;height:5px;width:80px}
+.bar-f{height:5px;border-radius:3px}
+
+/* ============================================
+   Contratos
+   ============================================ */
+.ctbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.ctbl th{font-size:10px;color:var(--tx2);font-weight:500;padding:5px 8px;text-align:left;border-bottom:0.5px solid var(--bd)}
+.ctbl td{padding:7px 8px;border-bottom:0.5px solid var(--bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctbl tr:last-child td{border-bottom:none}
+.ctbl tr:hover td{background:var(--bg1)}
+
+/* ============================================
+   Gráficos
+   ============================================ */
+.lrow{display:flex;gap:10px;margin-bottom:7px;font-size:10px;color:var(--tx1);flex-wrap:wrap}
+.ldot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+
+/* ============================================
+   Proyecciones
+   ============================================ */
+.proj-wrap{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
+.proj-ctrl{background:var(--bg1);border:0.5px solid var(--bd);border-radius:var(--r-lg);padding:14px}
+.ctrl-lbl{font-size:10px;font-weight:500;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+.ctrl-r{margin-bottom:10px}
+.ctrl-n{font-size:11px;color:var(--tx0);display:flex;justify-content:space-between;margin-bottom:4px}
+.ctrl-v{font-weight:500}
+input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
+.be-block{background:var(--bg0);border-radius:var(--r-md);padding:9px 10px;margin-bottom:6px;border:0.5px solid var(--bd)}
+.be-t{font-size:10px;color:var(--tx1);margin-bottom:4px;font-weight:500}
+.be-v{font-size:16px;font-weight:500}
+.be-s{font-size:10px;color:var(--tx1);margin-top:2px}
+.sc-pills{display:flex;gap:5px;flex-wrap:wrap}
+.scp{font-size:11px;padding:4px 10px;border-radius:10px;border:0.5px solid var(--bd);background:var(--bg1);cursor:pointer;color:var(--tx1);transition:all .12s}
+.scp.on{background:var(--blue-lt);color:var(--blue-dk);border-color:transparent}
+.insight{background:var(--blue-lt);border:0.5px solid var(--blue);border-radius:var(--r-lg);padding:12px;margin-top:10px}
+.insight-txt{font-size:11px;color:var(--blue-dk);line-height:1.6}
+
+/* ============================================
+   Reportes
+   ============================================ */
+.rpt-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rpt-item{border:0.5px solid var(--bd);border-radius:var(--r-lg);padding:12px;cursor:pointer;transition:all .15s;background:var(--bg0)}
+.rpt-item:hover{border-color:var(--blue);background:var(--blue-lt)}
+.rpt-ico{font-size:22px;color:var(--tx1);margin-bottom:6px}
+.rpt-name{font-size:12px;font-weight:500;margin-bottom:2px}
+.rpt-desc{font-size:10px;color:var(--tx1)}
+
+/* ============================================
+   Acciones rápidas
+   ============================================ */
+.qa{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--r-md);border:0.5px solid var(--bd);background:var(--bg1);cursor:pointer;width:100%;margin-bottom:5px;font-size:12px;color:var(--tx0);text-align:left;transition:background .12s}
+.qa:last-child{margin-bottom:0}
+.qa:hover{background:var(--bg2)}
+.qa i{font-size:15px;color:var(--tx1);flex-shrink:0}
+
+/* ============================================
+   Footer
+   ============================================ */
+.footer{padding:8px 16px;border-top:0.5px solid var(--bd);background:var(--bg0);font-size:10px;color:var(--tx1);display:flex;justify-content:space-between;align-items:center}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .g3,.g3b,.g2{grid-template-columns:1fr}
+  .proj-wrap{grid-template-columns:1fr}
+  .rpt-g{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================================================
+       SIDEBAR
+       ================================================ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-ico"><i class="ti ti-building-store" style="font-size:15px;color:#fff"></i></div>
+      <div>
+        <div class="brand-name">CC Admin</div>
+        <div class="brand-sub">Panel de Administración</div>
+      </div>
+    </div>
+
+    <div class="edificio-sel">
+      <select id="edificioSel" onchange="cambiarEdificio(this.value)">
+        <option value="plc">Plaza Lo Castillo</option>
+      </select>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-sect">Principal</div>
+      <div class="ni on"><i class="ti ti-home"></i>Inicio</div>
+      <div class="ni"><i class="ti ti-building"></i>Locales</div>
+      <div class="ni"><i class="ti ti-users"></i>Locatarios</div>
+
+      <div class="nav-sect">Gestión</div>
+      <div class="ni"><i class="ti ti-file-text"></i>Contratos</div>
+      <div class="ni"><i class="ti ti-receipt"></i>Gastos comunes</div>
+      <div class="ni"><i class="ti ti-cash"></i>Ingresos/Gastos</div>
+
+      <div class="nav-sect">Operaciones</div>
+      <div class="ni"><i class="ti ti-tool"></i>Mantenimiento<span class="ni-badge">2</span></div>
+      <div class="ni"><i class="ti ti-car"></i>Estacionamiento</div>
+      <div class="ni"><i class="ti ti-alert-triangle"></i>Incidencias<span class="ni-badge">3</span></div>
+
+      <div class="nav-sect">Análisis</div>
+      <div class="ni"><i class="ti ti-chart-line"></i>Proyecciones</div>
+      <div class="ni"><i class="ti ti-chart-bar"></i>Reportes</div>
+      <div class="ni"><i class="ti ti-settings"></i>Configuración</div>
+    </nav>
+
+    <div class="sb-stats">
+      <div class="sb-stat">
+        <div class="sb-stat-row">
+          <span>Ocupación</span>
+          <span class="sb-stat-val" id="sb-occ-val">94%</span>
+        </div>
+        <div class="prog"><div class="pf" id="sb-occ-bar" style="width:94%;background:var(--green)"></div></div>
+      </div>
+      <div class="sb-stat">
+        <div class="sb-stat-row">
+          <span>Estacionam.</span>
+          <span class="sb-stat-val">62%</span>
+        </div>
+        <div class="prog"><div class="pf" style="width:62%;background:var(--blue)"></div></div>
+      </div>
+    </div>
+
+    <div class="sb-user">
+      <div class="sb-av">AD</div>
+      <div>
+        <div style="font-size:11px;font-weight:500">Administrador</div>
+        <div style="font-size:10px;color:var(--tx1)" id="sb-edificio-txt">Plaza Lo Castillo</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================================================
+       MAIN
+       ================================================ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <span class="tb-title" id="topbar-title">Dashboard · Plaza Lo Castillo</span>
+      <input class="tb-search" type="text" placeholder="Buscar local, locatario...">
+      <div class="ib" title="Calendario"><i class="ti ti-calendar"></i></div>
+      <div class="ib" title="Notificaciones"><i class="ti ti-bell"></i><span class="ndot"></span></div>
+      <div class="ib" title="Exportar reporte" onclick="exportarReporte()"><i class="ti ti-file-export"></i></div>
+      <span class="conn-pill conn-off" id="connStatus">Demo · Sin BD</span>
+      <div class="av">AD</div>
+    </div>
+
+    <!-- Contenido -->
+    <div class="content">
+
+      <!-- ===== KPIs ===== -->
+      <div class="kpis">
+        <div class="kc" style="background:var(--green-lt)">
+          <i class="ti ti-cash kc-ico" style="color:var(--green)"></i>
+          <div class="kc-lbl" style="color:var(--green-dk)">
+            <i class="ti ti-trending-up" style="font-size:11px"></i>Total ingresos del mes
+          </div>
+          <div class="kc-val" style="color:var(--green-dk)" id="k-ing">$8,500,000 CLP</div>
+          <div class="kc-sub" style="color:var(--green-dk)">
+            <i class="ti ti-arrow-up" style="font-size:10px"></i> +8% vs mes anterior
+          </div>
+        </div>
+        <div class="kc" style="background:var(--amber-lt)">
+          <i class="ti ti-receipt kc-ico" style="color:var(--amber)"></i>
+          <div class="kc-lbl" style="color:var(--amber-dk)">
+            <i class="ti ti-alert-circle" style="font-size:11px"></i>G.C. pendientes
+          </div>
+          <div class="kc-val" style="color:var(--amber-dk)" id="k-gc">12%</div>
+          <div class="kc-sub" style="color:var(--amber-dk)">8 locales · 3 en rojo</div>
+        </div>
+        <div class="kc" style="background:var(--blue-lt)">
+          <i class="ti ti-building kc-ico" style="color:var(--blue)"></i>
+          <div class="kc-lbl" style="color:var(--blue-dk)">
+            <i class="ti ti-building" style="font-size:11px"></i>Locales ocupados
+          </div>
+          <div class="kc-val" style="color:var(--blue-dk)" id="k-occ">94%</div>
+          <div class="kc-sub" style="color:var(--blue-dk)">135 activos · 9 vacantes</div>
+        </div>
+        <div class="kc" style="background:var(--purple-lt)">
+          <i class="ti ti-tool kc-ico" style="color:var(--purple)"></i>
+          <div class="kc-lbl" style="color:var(--purple-dk)">
+            <i class="ti ti-alert-triangle" style="font-size:11px"></i>Tickets abiertos
+          </div>
+          <div class="kc-val" style="color:var(--purple-dk)" id="k-tickets">5</div>
+          <div class="kc-sub" style="color:var(--purple-dk)">2 urgentes · 3 normales</div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 1: mapa + ingresos + gastos ===== -->
+      <div class="g3">
+
+        <!-- Mapa de pisos -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Mapa de locales por piso</span>
+            <select id="pisoSel" style="font-size:10px;padding:3px 6px;border:0.5px solid var(--bd2);border-radius:5px;background:var(--bg1);color:var(--tx0);outline:none" onchange="renderFloor()">
+              <option value="all">Todos</option>
+              <option value="0">Nivel PB</option>
+              <option value="1">Nivel 1</option>
+              <option value="2">Nivel 2</option>
+            </select>
+          </div>
+          <div id="floorMap"></div>
+          <div class="leg">
+            <div class="li"><div class="ld" style="background:#1D9E75"></div>Pagado</div>
+            <div class="li"><div class="ld" style="background:#EF9F27"></div>Pendiente</div>
+            <div class="li"><div class="ld" style="background:#E24B4A"></div>Vacante</div>
+            <div class="li"><div class="ld" style="background:#B4B2A9"></div>Cerrado</div>
+          </div>
+          <div class="stip" id="stip"></div>
+        </div>
+
+        <!-- Gráfico ingresos -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Ingresos 2026</span>
+            <i class="ti ti-chart-line ci"></i>
+          </div>
+          <div class="lrow">
+            <span><span class="ldot" style="background:#185FA5"></span>Arriendo</span>
+            <span><span class="ldot" style="background:#B5D4F4"></span>Gastos comunes</span>
+          </div>
+          <div style="position:relative;height:190px">
+            <canvas id="incomeC"></canvas>
+          </div>
+        </div>
+
+        <!-- Distribución gastos -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Distribución gastos</span>
+            <i class="ti ti-chart-pie ci"></i>
+          </div>
+          <div style="position:relative;height:130px">
+            <canvas id="expC"></canvas>
+          </div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--tx1)"><span class="ldot" style="background:#185FA5"></span>Seguridad</span>
+              <span style="font-weight:500">35%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--tx1)"><span class="ldot" style="background:#E24B4A"></span>Mantención</span>
+              <span style="font-weight:500">25%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--tx1)"><span class="ldot" style="background:#1D9E75"></span>Serv. básicos</span>
+              <span style="font-weight:500">20%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--tx1)"><span class="ldot" style="background:#EF9F27"></span>Áreas verdes</span>
+              <span style="font-weight:500">10%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--tx1)"><span class="ldot" style="background:#7F77DD"></span>Administración</span>
+              <span style="font-weight:500">10%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 2: semáforo + parking + detalle ===== -->
+      <div class="g3b">
+
+        <!-- Semáforo GC -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Semáforo gastos comunes</span>
+            <div style="display:flex;gap:5px">
+              <span class="tag t-r" id="cnt-r">3 rojo</span>
+              <span class="tag t-y" id="cnt-y">5 alerta</span>
+              <span class="tag t-g" id="cnt-g">127 al día</span>
+            </div>
+          </div>
+          <div class="ftabs" id="semTabs">
+            <button class="ftab on" onclick="setSemFilter('todos',this)">Todos</button>
+            <button class="ftab" onclick="setSemFilter('rojo',this)">Rojo</button>
+            <button class="ftab" onclick="setSemFilter('amarillo',this)">Amarillo</button>
+            <button class="ftab" onclick="setSemFilter('verde',this)">Verde</button>
+          </div>
+          <div id="semGrid"></div>
+        </div>
+
+        <!-- Estacionamiento -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Estacionamiento en vivo</span>
+            <span style="font-size:10px;color:var(--tx1)" id="park-time">10:42</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+            <div style="text-align:center;padding:6px;border-radius:var(--r-md);background:var(--green-lt)">
+              <div style="font-size:18px;font-weight:500;color:var(--green-dk)" id="p-free">23</div>
+              <div style="font-size:9px;color:var(--green-dk)">Libres</div>
+            </div>
+            <div style="text-align:center;padding:6px;border-radius:var(--r-md);background:var(--red-lt)">
+              <div style="font-size:18px;font-weight:500;color:var(--red-dk)" id="p-occ">37</div>
+              <div style="font-size:9px;color:var(--red-dk)">Ocupados</div>
+            </div>
+            <div style="text-align:center;padding:6px;border-radius:var(--r-md);background:var(--blue-lt)">
+              <div style="font-size:18px;font-weight:500;color:var(--blue-dk)" id="p-res">4</div>
+              <div style="font-size:9px;color:var(--blue-dk)">Reservados</div>
+            </div>
+          </div>
+          <div class="park-g" id="parkGrid"></div>
+          <div class="leg" style="margin-top:6px">
+            <div class="li"><div class="ld" style="background:#EAF3DE;border:0.5px solid #5DCAA5"></div>Libre</div>
+            <div class="li"><div class="ld" style="background:#FCEBEB;border:0.5px solid #F09595"></div>Ocupado</div>
+            <div class="li"><div class="ld" style="background:#E6F1FB;border:0.5px solid #85B7EB"></div>Reservado</div>
+          </div>
+          <div class="tk-h">Últimos movimientos</div>
+          <div class="tk-r"><span>E-14 liberado</span><span style="color:var(--tx1)">10:38</span></div>
+          <div class="tk-r"><span>E-07 ocupado</span><span style="color:var(--tx1)">10:35</span></div>
+          <div class="tk-r"><span>E-31 reservado · L-045</span><span style="color:var(--tx1)">09:55</span></div>
+        </div>
+
+        <!-- Columna derecha: detalle local + acciones -->
+        <div style="display:flex;flex-direction:column;gap:10px">
+
+          <!-- Sin local seleccionado -->
+          <div class="card" id="noLocal">
+            <div class="ch"><span class="ct">Detalle de local</span></div>
+            <div style="text-align:center;padding:20px 0;color:var(--tx1)">
+              <i class="ti ti-map-pin" style="font-size:28px;opacity:.4"></i>
+              <div style="font-size:11px;margin-top:8px;line-height:1.5">Haz clic en cualquier<br>local del mapa</div>
+            </div>
+          </div>
+
+          <!-- Con local seleccionado -->
+          <div class="card" id="localDetail" style="display:none">
+            <div class="ch">
+              <div>
+                <div style="font-size:13px;font-weight:500" id="dp-id">—</div>
+                <div style="font-size:11px;color:var(--tx1)" id="dp-name">—</div>
+              </div>
+              <i class="ti ti-x ci" style="font-size:18px" onclick="closeDetail()"></i>
+            </div>
+            <div class="dp-row"><span class="dp-k">Estado</span><span id="dp-estado">—</span></div>
+            <div class="dp-row"><span class="dp-k">Piso</span><span id="dp-piso">—</span></div>
+            <div class="dp-row"><span class="dp-k">Renta/mes</span><span id="dp-renta">—</span></div>
+            <div class="dp-row"><span class="dp-k">G.C. estado</span><span id="dp-gc">—</span></div>
+            <div class="dp-row"><span class="dp-k">Contrato hasta</span><span id="dp-vence">—</span></div>
+            <div class="dp-row"><span class="dp-k">Días restantes</span><span id="dp-dias">—</span></div>
+          </div>
+
+          <!-- Acciones rápidas -->
+          <div class="card">
+            <div class="ch"><span class="ct">Acciones rápidas</span></div>
+            <button class="qa" onclick="exportarReporte()">
+              <i class="ti ti-file-export"></i>Exportar reporte mensual
+            </button>
+            <button class="qa" onclick="alert('Activa Supabase para enviar cobros por email')">
+              <i class="ti ti-mail"></i>Enviar cobros pendientes
+            </button>
+            <button class="qa" onclick="alert('Módulo de incidencias con Supabase')">
+              <i class="ti ti-alert-triangle"></i>Nueva incidencia
+            </button>
+            <button class="qa" onclick="alert('Ver análisis de vacantes y mix comercial')">
+              <i class="ti ti-building-plus"></i>Estrategia vacantes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 3: mantenimiento + contratos ===== -->
+      <div class="g2">
+
+        <!-- Mantenimiento -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Mantenimiento preventivo</span>
+            <i class="ti ti-tools ci"></i>
+          </div>
+          <div class="mc">
+            <div class="mc-d" style="background:var(--green-lt)">
+              <i class="ti ti-check" style="font-size:10px;color:var(--green-dk)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500">Inspección eléctrica general</div>
+              <div style="font-size:10px;color:var(--tx1)">28 abr · Electromecánica Sur</div>
+            </div>
+            <span class="tag t-g">Listo</span>
+          </div>
+          <div class="mc">
+            <div class="mc-d" style="background:var(--amber-lt)">
+              <i class="ti ti-loader" style="font-size:10px;color:var(--amber-dk)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500">Revisión ascensor central</div>
+              <div style="font-size:10px;color:var(--tx1)">En curso · 45%</div>
+              <div class="bar-t" style="margin-top:4px">
+                <div class="bar-f" style="width:45%;background:var(--amber)"></div>
+              </div>
+            </div>
+            <span class="tag t-y">En curso</span>
+          </div>
+          <div class="mc">
+            <div class="mc-d" style="background:var(--blue-lt)">
+              <i class="ti ti-clock" style="font-size:10px;color:var(--blue-dk)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500">Limpieza techos y canaletas</div>
+              <div style="font-size:10px;color:var(--tx1)">Planificado · 23 mayo</div>
+            </div>
+            <span class="tag t-b">Plan.</span>
+          </div>
+          <div class="mc" style="border-bottom:none">
+            <div class="mc-d" style="background:var(--red-lt)">
+              <i class="ti ti-alert-triangle" style="font-size:10px;color:var(--red-dk)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500">Ascensor piso 2 — fuera de servicio</div>
+              <div style="font-size:10px;color:var(--tx1)">Reportado hoy · Técnico asignado</div>
+            </div>
+            <span class="tag t-r">Urgente</span>
+          </div>
+          <div class="tk-h">Próximas tareas</div>
+          <div class="tk-r"><span>Sistema contra incendios</span><span style="color:var(--tx1)">30 may</span></div>
+          <div class="tk-r"><span>Pintura pasillos comunes</span><span style="color:var(--tx1)">15 jun</span></div>
+          <div class="tk-r"><span>Fumigación general</span><span style="color:var(--tx1)">01 jul</span></div>
+          <div class="tk-r"><span>Impermeabilización terraza</span><span style="color:var(--tx1)">20 ago</span></div>
+        </div>
+
+        <!-- Contratos -->
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Seguimiento de contratos</span>
+            <div style="display:flex;gap:5px">
+              <span class="tag t-y">4 por vencer</span>
+              <span class="tag t-r">2 vencidos</span>
+            </div>
+          </div>
+          <div class="ftabs" id="ctrTabs">
+            <button class="ftab on" onclick="setCtrFilter('todos',this)">Todos</button>
+            <button class="ftab" onclick="setCtrFilter('activo',this)">Activos</button>
+            <button class="ftab" onclick="setCtrFilter('por_vencer',this)">Por vencer</button>
+            <button class="ftab" onclick="setCtrFilter('vencido',this)">Vencidos</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="ctbl">
+              <thead>
+                <tr>
+                  <th style="width:50px">Local</th>
+                  <th style="width:130px">Arrendatario</th>
+                  <th style="width:65px">Renta</th>
+                  <th style="width:105px">Días rest.</th>
+                  <th style="width:75px">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="ctrBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PROYECCIONES ===== -->
+      <div class="card">
+        <div class="ch">
+          <span class="ct">Proyecciones financieras interactivas</span>
+          <div class="sc-pills" id="scPills">
+            <button class="scp" onclick="loadScenario('pesimista',this)">Pesimista</button>
+            <button class="scp on" onclick="loadScenario('base',this)">Base actual</button>
+            <button class="scp" onclick="loadScenario('optimista',this)">Optimista</button>
+          </div>
+        </div>
+        <div class="proj-wrap">
+          <div class="proj-ctrl">
+            <div class="ctrl-lbl">Variables del modelo</div>
+            <div class="ctrl-r">
+              <div class="ctrl-n"><span>Ocupación</span><span class="ctrl-v" id="v-occ">94%</span></div>
+              <input type="range" min="50" max="100" value="94" step="1" id="s-occ" oninput="updateProj()">
+            </div>
+            <div class="ctrl-r">
+              <div class="ctrl-n"><span>Renta prom./local</span><span class="ctrl-v" id="v-rent">$750K</span></div>
+              <input type="range" min="300" max="1500" value="750" step="10" id="s-rent" oninput="updateProj()">
+            </div>
+            <div class="ctrl-r">
+              <div class="ctrl-n"><span>Gastos fijos/mes</span><span class="ctrl-v" id="v-exp">$3.5M</span></div>
+              <input type="range" min="1500" max="7000" value="3500" step="100" id="s-exp" oninput="updateProj()">
+            </div>
+            <div class="ctrl-r">
+              <div class="ctrl-n"><span>Crecimiento anual</span><span class="ctrl-v" id="v-gr">3%</span></div>
+              <input type="range" min="0" max="15" value="3" step="1" id="s-gr" oninput="updateProj()">
+            </div>
+            <div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:4px">
+              <div class="be-block">
+                <div class="be-t">Punto de equilibrio</div>
+                <div class="be-v" id="be-loc">—</div>
+                <div class="be-s" id="be-s">locales mínimos</div>
+              </div>
+              <div class="be-block">
+                <div class="be-t">Utilidad neta / mes</div>
+                <div class="be-v" id="be-util">—</div>
+              </div>
+              <div class="be-block">
+                <div class="be-t">Proyección anual</div>
+                <div class="be-v" id="be-anual" style="color:var(--blue)">—</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="position:relative;height:200px">
+              <canvas id="projC"></canvas>
+            </div>
+            <div class="insight">
+              <div style="font-size:11px;font-weight:500;color:var(--blue-dk);margin-bottom:5px">
+                <i class="ti ti-sparkles" style="font-size:13px"></i> Análisis automático
+              </div>
+              <div class="insight-txt" id="insightTxt">Ajusta los sliders para ver el análisis.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CALENDARIO + GANTT ===== -->
+      <div class="card">
+        <div class="ch" style="flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="ct">Calendario y cronograma</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button class="cal-nav" onclick="prevMonth()"><i class="ti ti-chevron-left"></i></button>
+              <span style="font-size:12px;font-weight:500;min-width:110px;text-align:center" id="calTitle">—</span>
+              <button class="cal-nav" onclick="nextMonth()"><i class="ti ti-chevron-right"></i></button>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <div class="leg">
+              <div class="li"><div class="ld" style="background:#EF9F27"></div>Mantenimiento</div>
+              <div class="li"><div class="ld" style="background:#185FA5"></div>Contrato</div>
+              <div class="li"><div class="ld" style="background:#1D9E75"></div>Marketing</div>
+              <div class="li"><div class="ld" style="background:#7F77DD"></div>Reunión</div>
+              <div class="li"><div class="ld" style="background:#E24B4A"></div>Incidencia</div>
+            </div>
+            <button onclick="openAddEvent()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r-md);border:none;background:var(--blue);cursor:pointer;font-size:11px;color:#fff;font-weight:500">
+              <i class="ti ti-plus" style="font-size:13px"></i>Agregar evento
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid: calendario + detalle día -->
+        <div style="display:grid;grid-template-columns:1fr 210px;gap:14px;align-items:start">
+          <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
+          <div>
+            <div style="font-size:11px;font-weight:500;color:var(--tx1);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--bd)">Detalle del día</div>
+            <div id="dayDetail" style="font-size:11px;color:var(--tx1);text-align:center;padding:12px 0">
+              Selecciona un día
+            </div>
+          </div>
+        </div>
+
+        <!-- Gantt -->
+        <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--bd)">
+          <div style="font-size:11px;font-weight:500;color:var(--tx1);margin-bottom:8px">Cronograma del mes</div>
+          <div id="ganttWrap" style="overflow-x:auto"></div>
+        </div>
+      </div>
+
+      <!-- ===== REPORTES ===== -->
+      <div class="card">
+        <div class="ch">
+          <span class="ct">Módulo de reportes</span>
+          <span style="font-size:11px;color:var(--tx1)">Conecta Supabase para reportes reales</span>
+        </div>
+        <div class="rpt-g">
+          <div class="rpt-item" onclick="exportarReporte()">
+            <div class="rpt-ico"><i class="ti ti-calendar-stats"></i></div>
+            <div class="rpt-name">Informe mensual</div>
+            <div class="rpt-desc">Resumen ejecutivo del mes</div>
+          </div>
+          <div class="rpt-item" onclick="alert('Activa Supabase para este reporte')">
+            <div class="rpt-ico"><i class="ti ti-receipt"></i></div>
+            <div class="rpt-name">Estado deudores</div>
+            <div class="rpt-desc">Semáforo gastos comunes</div>
+          </div>
+          <div class="rpt-item" onclick="alert('Activa Supabase para este reporte')">
+            <div class="rpt-ico"><i class="ti ti-file-text"></i></div>
+            <div class="rpt-name">Contratos</div>
+            <div class="rpt-desc">Alertas de vencimiento</div>
+          </div>
+          <div class="rpt-item" onclick="alert('Activa Supabase para este reporte')">
+            <div class="rpt-ico"><i class="ti ti-tool"></i></div>
+            <div class="rpt-name">Mantenimiento</div>
+            <div class="rpt-desc">Historial e incidencias</div>
+          </div>
+          <div class="rpt-item" onclick="alert('Activa Supabase para este reporte')">
+            <div class="rpt-ico"><i class="ti ti-chart-line"></i></div>
+            <div class="rpt-name">Proyecciones</div>
+            <div class="rpt-desc">Escenarios financieros</div>
+          </div>
+          <div class="rpt-item" onclick="alert('Activa Supabase para este reporte')">
+            <div class="rpt-ico"><i class="ti ti-presentation"></i></div>
+            <div class="rpt-name">Informe directorio</div>
+            <div class="rpt-desc">Consolidado anual</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>
+        <i class="ti ti-circle-check" style="font-size:11px;color:var(--green);vertical-align:-1px"></i>
+        CC Admin v1.0 · Datos de demostración · Conecta Supabase para datos reales
+      </span>
+      <span id="footer-txt">Plaza Lo Castillo · Candelaria Goyenechea 3820, Vitacura · <span id="footer-time"></span></span>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ============================================
+   SUPABASE CONFIG
+   ⚠️ Reemplaza con tus credenciales reales
+      Settings → API en supabase.com
+   ============================================ */
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co'
+const SUPABASE_KEY = 'tu-anon-public-key-aqui'
+
+let db = null
+
+async function initSupabase() {
+  if (SUPABASE_URL.includes('TU-PROYECTO')) return
+  try {
+    const { createClient } = supabase
+    db = createClient(SUPABASE_URL, SUPABASE_KEY)
+    const { data, error } = await db.from('locales').select('id').limit(1)
+    if (!error) {
+      document.getElementById('connStatus').textContent = 'Conectado · Supabase'
+      document.getElementById('connStatus').className = 'conn-pill conn-ok'
+      await cargarDatosReales()
+    }
+  } catch(e) { console.log('Modo demo:', e) }
+}
+
+async function cargarDatosReales() {
+  if (!db) return
+  const { data } = await db.from('locales').select('*').order('numero')
+  if (!data || !data.length) return
+  FLOORS.forEach(f => {
+    f.rows.forEach(row => {
+      row.forEach(cell => {
+        if (!cell) return
+        const real = data.find(l => l.numero === cell.id)
+        if (real) { cell.s = real.estado; cell.n = real.nombre || '' }
+      })
+    })
+  })
+  renderFloor()
+}
+
+/* ============================================
+   EDIFICIOS (multi-edificio)
+   ============================================ */
+const EDIFICIOS = {
+  plc: { name: 'Plaza Lo Castillo', address: 'Candelaria Goyenechea 3820, Vitacura' }
+}
+
+function cambiarEdificio(id) {
+  const e = EDIFICIOS[id]
+  if (!e) return
+  document.getElementById('sb-edificio-txt').textContent = e.name
+  document.getElementById('topbar-title').textContent = 'Dashboard · ' + e.name
+}
+
+/* ============================================
+   MAPA DE PISOS
+   ============================================ */
+const ST = {
+  paid:    { bg:'#1D9E75', fg:'#EAF3DE' },
+  pending: { bg:'#EF9F27', fg:'#412402' },
+  vacant:  { bg:'#E24B4A', fg:'#FCEBEB' },
+  closed:  { bg:'#B4B2A9', fg:'#2C2C2A' }
+}
+
+const LOCAL_INFO = {
+  'L101':{ name:'Farmacia Cruz Verde', piso:'PB', renta:1100000, vence:'2027-03-31', gc:0 },
+  'L102':{ name:'Óptica Galileo',      piso:'PB', renta:850000,  vence:'2026-12-15', gc:0 },
+  'L103':{ name:'Banco Santander',     piso:'PB', renta:1500000, vence:'2028-01-01', gc:0 },
+  'L104':{ name:'Café Emporio',        piso:'PB', renta:720000,  vence:'2026-09-30', gc:1 },
+  'L105':{ name:'Boutique Makia',      piso:'PB', renta:980000,  vence:'2027-02-28', gc:2 },
+  'L106':{ name:'Joyería Cádiz',       piso:'PB', renta:890000,  vence:'2026-12-31', gc:0 },
+  'L107':{ name:'Relojería Suiza',     piso:'PB', renta:760000,  vence:'2025-11-30', gc:3 },
+  'L108':{ name:'Librería Estudio',    piso:'PB', renta:640000,  vence:'2027-06-30', gc:0 },
+  'L201':{ name:'Consultoría Legal',   piso:'P1', renta:920000,  vence:'2027-01-31', gc:0 },
+  'L203':{ name:'Joyería Platinium',   piso:'P1', renta:1200000, vence:'2026-10-31', gc:3 },
+  'L205':{ name:'Ropa Dama Elegance',  piso:'P1', renta:870000,  vence:'2026-07-31', gc:0 },
+  'L206':{ name:'Ropa Niño Kids',      piso:'P1', renta:710000,  vence:'2027-09-30', gc:2 },
+  'L301':{ name:'Modista Artesanal',   piso:'P2', renta:590000,  vence:'2026-11-30', gc:0 },
+  'L302':{ name:'Telas & Textiles',    piso:'P2', renta:520000,  vence:'2027-04-30', gc:1 },
+}
+
+const FLOORS = [
+  { label:'Nivel PB', rows:[
+    [{id:'L101',s:'paid'},{id:'L102',s:'paid'},{id:'L103',s:'paid'},{id:'L104',s:'paid'},{id:'L105',s:'pending'},{id:'L106',s:'paid'},{id:'L107',s:'paid'},{id:'L108',s:'paid'}],
+    [{id:'L109',s:'paid'},null,null,null,null,null,null,{id:'L110',s:'vacant'}],
+    [{id:'L111',s:'paid'},null,null,null,null,null,null,{id:'L112',s:'paid'}],
+    [{id:'L113',s:'closed'},{id:'L114',s:'paid'},{id:'L115',s:'paid'},{id:'L116',s:'vacant'},{id:'L117',s:'paid'},{id:'L118',s:'paid'},{id:'L119',s:'paid'},{id:'L120',s:'paid'}]
+  ]},
+  { label:'Nivel 1', rows:[
+    [{id:'L201',s:'paid'},{id:'L202',s:'paid'},{id:'L203',s:'paid'},{id:'L204',s:'paid'},{id:'L205',s:'paid'},{id:'L206',s:'pending'},{id:'L207',s:'paid'},{id:'L208',s:'paid'}],
+    [{id:'L209',s:'paid'},null,null,null,null,null,null,{id:'L210',s:'pending'}],
+    [{id:'L211',s:'vacant'},null,null,null,null,null,null,{id:'L212',s:'paid'}],
+    [{id:'L213',s:'vacant'},{id:'L214',s:'vacant'},{id:'L215',s:'paid'},{id:'L216',s:'paid'},{id:'L217',s:'paid'},{id:'L218',s:'paid'},{id:'L219',s:'paid'},{id:'L220',s:'vacant'}]
+  ]},
+  { label:'Nivel 2', rows:[
+    [{id:'L301',s:'paid'},{id:'L302',s:'paid'},{id:'L303',s:'paid'},{id:'L304',s:'paid'},{id:'L305',s:'pending'},{id:'L306',s:'paid'},{id:'L307',s:'paid'},{id:'L308',s:'vacant'}],
+    [{id:'L309',s:'paid'},null,null,null,null,null,null,{id:'L310',s:'vacant'}],
+    [{id:'L311',s:'vacant'},null,null,null,null,null,null,{id:'L312',s:'paid'}],
+    [{id:'L313',s:'vacant'},{id:'L314',s:'vacant'},{id:'L315',s:'paid'},{id:'L316',s:'closed'},{id:'L317',s:'paid'},{id:'L318',s:'paid'},{id:'L319',s:'vacant'},{id:'L320',s:'paid'}]
+  ]}
+]
+
+function renderFloor() {
+  const sel = document.getElementById('pisoSel').value
+  const floors = sel === 'all' ? FLOORS : [FLOORS[+sel]]
+  let h = ''
+  floors.forEach(f => {
+    const all = f.rows.flat().filter(Boolean)
+    const occ = all.filter(c => c.s === 'paid' || c.s === 'pending').length
+    h += `<div class="fl-lbl"><span>${f.label}</span><span style="font-weight:400">${occ}/${all.length} ocupados</span></div><div class="fl-g">`
+    f.rows.forEach(row => row.forEach(c => {
+      if (!c) { h += '<div class="se"></div>'; return }
+      const col = ST[c.s] || ST.vacant
+      h += `<div class="sc" style="background:${col.bg};color:${col.fg}" onclick="showDetail('${c.id}')" title="${c.id}${c.n?' · '+c.n:''}">${c.id.replace('L','')}</div>`
+    }))
+    h += '</div>'
+  })
+  document.getElementById('floorMap').innerHTML = h
+}
+
+function showDetail(id) {
+  const d = LOCAL_INFO[id]
+  document.getElementById('noLocal').style.display = 'none'
+  document.getElementById('localDetail').style.display = 'block'
+  document.getElementById('dp-id').textContent = id
+  document.getElementById('dp-name').textContent = d ? d.name : 'Sin datos'
+
+  let estado = 'vacant'
+  FLOORS.forEach(f => f.rows.forEach(r => r.forEach(c => { if (c && c.id === id) estado = c.s })))
+
+  const stMap = {
+    paid:    '<span class="tag t-g">Pagado</span>',
+    pending: '<span class="tag t-y">Pendiente</span>',
+    vacant:  '<span class="tag t-r">Vacante</span>',
+    closed:  '<span class="tag t-n">Cerrado</span>'
+  }
+  document.getElementById('dp-estado').innerHTML = stMap[estado] || '—'
+  document.getElementById('dp-piso').textContent = d ? d.piso : '—'
+  document.getElementById('dp-renta').textContent = d ? '$' + (d.renta / 1000).toFixed(0) + 'K CLP' : '—'
+
+  if (d) {
+    const gcMap = {
+      0: '<span class="tag t-g">Al día ✓</span>',
+      1: '<span class="tag t-y">1 mes deuda</span>',
+      2: '<span class="tag t-y">2 meses deuda</span>',
+      3: '<span class="tag t-r">3+ meses — MORA</span>'
+    }
+    document.getElementById('dp-gc').innerHTML = gcMap[d.gc] || '—'
+    const dias = Math.round((new Date(d.vence) - new Date('2026-05-11')) / 86400000)
+    document.getElementById('dp-vence').textContent = new Date(d.vence).toLocaleDateString('es-CL', { day:'2-digit', month:'short', year:'2-digit' })
+    const col = dias < 0 ? 'var(--red-dk)' : dias <= 90 ? 'var(--amber-dk)' : 'var(--green-dk)'
+    document.getElementById('dp-dias').innerHTML = `<span style="color:${col}">${dias < 0 ? Math.abs(dias) + ' días vencido' : dias + ' días'}</span>`
+  } else {
+    ['dp-gc','dp-vence','dp-dias'].forEach(id => { document.getElementById(id).textContent = '—' })
+  }
+
+  const tip = document.getElementById('stip')
+  tip.style.display = 'none'
+}
+
+function closeDetail() {
+  document.getElementById('noLocal').style.display = ''
+  document.getElementById('localDetail').style.display = 'none'
+}
+
+/* ============================================
+   SEMÁFORO GASTOS COMUNES
+   ============================================ */
+const SEM_DATA = [
+  { local:'L-107', name:'Relojería Suiza',   meses:4, monto:2280000 },
+  { local:'L-203', name:'Joyería Platinium', meses:3, monto:1980000 },
+  { local:'L-089', name:'Casa de la India',  meses:3, monto:1560000 },
+  { local:'L-105', name:'Boutique Makia',    meses:2, monto:1120000 },
+  { local:'L-206', name:'Ropa Niño Kids',    meses:2, monto:890000  },
+  { local:'L-202', name:'Instituto Idiomas', meses:1, monto:540000  },
+  { local:'L-104', name:'Café Emporio',      meses:1, monto:490000  },
+  { local:'L-302', name:'Telas & Textiles',  meses:1, monto:420000  },
+]
+
+let semFilter = 'todos'
+
+function semColor(m) {
+  if (m >= 3) return { dot: 'var(--red)',   tag: 't-r', lbl: m + ' meses' }
+  if (m >= 1) return { dot: 'var(--amber)', tag: 't-y', lbl: m + ' mes' + (m > 1 ? 'es' : '') }
+  return { dot: 'var(--green)', tag: 't-g', lbl: 'Al día' }
+}
+
+function setSemFilter(f, btn) {
+  semFilter = f
+  document.querySelectorAll('#semTabs .ftab').forEach(b => b.classList.remove('on'))
+  btn.classList.add('on')
+  renderSem()
+}
+
+function renderSem() {
+  const data = SEM_DATA.filter(d => {
+    if (semFilter === 'rojo')     return d.meses >= 3
+    if (semFilter === 'amarillo') return d.meses >= 1 && d.meses < 3
+    if (semFilter === 'verde')    return d.meses === 0
+    return true
+  })
+  document.getElementById('semGrid').innerHTML = data.map(d => {
+    const c = semColor(d.meses)
+    return `<div class="sem-row">
+      <div class="sem-dot" style="background:${c.dot};box-shadow:0 0 0 3px ${c.dot}28"></div>
+      <span class="sem-name">${d.local} · ${d.name}</span>
+      <span class="tag ${c.tag}" style="font-size:9px;flex-shrink:0">${c.lbl}</span>
+      <span class="sem-monto">$${(d.monto / 1000).toFixed(0)}K</span>
+    </div>`
+  }).join('')
+
+  const r = SEM_DATA.filter(d => d.meses >= 3).length
+  const y = SEM_DATA.filter(d => d.meses >= 1 && d.meses < 3).length
+  document.getElementById('cnt-r').textContent = r + ' rojo'
+  document.getElementById('cnt-y').textContent = y + ' alerta'
+  document.getElementById('cnt-g').textContent = (135 - r - y) + ' al día'
+}
+
+/* ============================================
+   CONTRATOS
+   ============================================ */
+const CONTRATOS = [
+  { local:'L-101', arr:'Farmacia Cruz Verde', renta:1100000, vence:'2027-03-31', estado:'activo'     },
+  { local:'L-103', arr:'Banco Santander',     renta:1500000, vence:'2028-01-01', estado:'activo'     },
+  { local:'L-104', arr:'Café Emporio',        renta:720000,  vence:'2026-09-30', estado:'por_vencer' },
+  { local:'L-105', arr:'Boutique Makia',      renta:980000,  vence:'2027-02-28', estado:'activo'     },
+  { local:'L-087', arr:'Peluquería BON',      renta:540000,  vence:'2026-08-01', estado:'por_vencer' },
+  { local:'L-103b',arr:'Mantelería Fina',     renta:590000,  vence:'2026-06-30', estado:'por_vencer' },
+  { local:'L-107', arr:'Relojería Suiza',     renta:760000,  vence:'2025-11-30', estado:'vencido'    },
+  { local:'L-145', arr:'Relojería Omega',     renta:810000,  vence:'2025-11-30', estado:'vencido'    },
+  { local:'L-163', arr:'Nordic Home',         renta:770000,  vence:'2026-09-30', estado:'por_vencer' },
+  { local:'L-172', arr:'Joyería Platinium',   renta:1200000, vence:'2026-10-31', estado:'activo'     },
+]
+
+let ctrFilter = 'todos'
+
+function setCtrFilter(f, btn) {
+  ctrFilter = f
+  document.querySelectorAll('#ctrTabs .ftab').forEach(b => b.classList.remove('on'))
+  btn.classList.add('on')
+  renderContratos()
+}
+
+function renderContratos() {
+  const data = CONTRATOS.filter(c => ctrFilter === 'todos' || c.estado === ctrFilter)
+  const stMap = {
+    activo:     '<span class="tag t-g">Activo</span>',
+    por_vencer: '<span class="tag t-y">Por vencer</span>',
+    vencido:    '<span class="tag t-r">Vencido</span>',
+  }
+  document.getElementById('ctrBody').innerHTML = data.map(c => {
+    const dias = Math.round((new Date(c.vence) - new Date('2026-05-11')) / 86400000)
+    const pct  = Math.max(0, Math.min(100, dias / 365 * 100)).toFixed(0)
+    const bc   = dias < 0 ? 'var(--red)' : dias <= 90 ? 'var(--amber)' : 'var(--green)'
+    const dtxt = dias < 0
+      ? `<span style="color:var(--red-dk)">${Math.abs(dias)}d vencido</span>`
+      : `<span style="color:${dias<=90?'var(--amber-dk)':'var(--green-dk)'}">${dias}d</span>`
+    return `<tr>
+      <td style="font-weight:500">${c.local}</td>
+      <td title="${c.arr}">${c.arr}</td>
+      <td>$${(c.renta/1000).toFixed(0)}K</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:5px">
+          <div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${bc}"></div></div>
+          ${dtxt}
+        </div>
+      </td>
+      <td>${stMap[c.estado] || c.estado}</td>
+    </tr>`
+  }).join('')
+}
+
+/* ============================================
+   ESTACIONAMIENTO
+   ============================================ */
+function renderParking() {
+  const states = []
+  for (let i = 0; i < 64; i++) {
+    if (i < 4) states.push('r')
+    else if (Math.random() < 0.58) states.push('o')
+    else states.push('f')
+  }
+  document.getElementById('parkGrid').innerHTML = states.map(s =>
+    `<div class="ps ps-${s==='f'?'f':s==='o'?'o':'r'}">${s==='r'?'R':''}</div>`
+  ).join('')
+  document.getElementById('p-free').textContent = states.filter(s => s === 'f').length
+  document.getElementById('p-occ').textContent  = states.filter(s => s === 'o').length
+  document.getElementById('p-res').textContent  = states.filter(s => s === 'r').length
+}
+
+/* ============================================
+   CHARTS
+   ============================================ */
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches
+const gcol   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'
+const tcol   = isDark ? 'rgba(255,255,255,0.5)'  : 'rgba(0,0,0,0.48)'
+
+new Chart('incomeC', {
+  type: 'bar',
+  data: {
+    labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+    datasets: [
+      {
+        type: 'line', label: 'Arriendo',
+        data: [7.2,7.4,7.8,8.0,8.5,8.3,8.7,8.9,8.6,9.1,9.3,9.0],
+        borderColor:'#185FA5', backgroundColor:'rgba(24,95,165,0.08)',
+        fill:true, tension:.4, pointRadius:3, pointBackgroundColor:'#185FA5', borderWidth:2, order:1
+      },
+      {
+        label: 'G.Comunes',
+        data: [3.1,3.3,3.0,3.2,3.4,3.1,3.3,3.5,3.2,3.6,3.4,3.3],
+        backgroundColor:'#B5D4F4', borderRadius:3, borderWidth:0, order:2
+      }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>'$'+c.parsed.y.toFixed(1)+'M'}} },
+    scales:{
+      x:{ ticks:{color:tcol,font:{size:10},autoSkip:false,maxRotation:0}, grid:{display:false}, border:{display:false} },
+      y:{ ticks:{color:tcol,font:{size:10},callback:v=>'$'+v+'M'}, grid:{color:gcol}, border:{display:false}, min:0, max:14 }
+    }
+  }
+})
+
+new Chart('expC', {
+  type: 'doughnut',
+  data: {
+    labels: ['Seguridad','Mantenimiento','Básicos','Áreas verdes','Admin'],
+    datasets:[{
+      data:[35,25,20,10,10],
+      backgroundColor:['#185FA5','#E24B4A','#1D9E75','#EF9F27','#7F77DD'],
+      borderWidth:0, hoverOffset:5
+    }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{display:false}} }
+})
+
+/* ============================================
+   PROYECCIONES FINANCIERAS
+   ============================================ */
+let projChart = null
+
+function updateProj() {
+  const occ  = +document.getElementById('s-occ').value
+  const rent = +document.getElementById('s-rent').value
+  const exp  = +document.getElementById('s-exp').value
+  const gr   = +document.getElementById('s-gr').value
+
+  document.getElementById('v-occ').textContent  = occ + '%'
+  document.getElementById('v-rent').textContent = '$' + rent + 'K'
+  document.getElementById('v-exp').textContent  = '$' + (exp / 1000).toFixed(1) + 'M'
+  document.getElementById('v-gr').textContent   = gr + '%'
+
+  const TOTAL = 144, GC = 0.18, VAR = 0.08
+
+  function calcM(i) {
+    const f  = Math.pow(1 + gr / 100 / 12, i)
+    const ri = Math.round(TOTAL * occ / 100) * rent * 1000 * f
+    const gc2= ri * GC
+    const ti = ri + gc2
+    const te = exp * 1000 + ti * VAR
+    return { ti, te, util: ti - te }
+  }
+
+  const m0 = calcM(0)
+  const be = Math.ceil((exp * 1000) / (rent * 1000 * (1 + GC) * (1 - VAR)))
+  let annualUtil = 0
+  const ing = [], gas = [], util = []
+
+  for (let i = 0; i < 12; i++) {
+    const m = calcM(i)
+    ing.push(+(m.ti   / 1000000).toFixed(2))
+    gas.push(+(m.te   / 1000000).toFixed(2))
+    util.push(+(m.util / 1000000).toFixed(2))
+    annualUtil += m.util
+  }
+
+  document.getElementById('be-loc').textContent   = be + ' locales'
+  document.getElementById('be-s').textContent     = 'de 144 (' + Math.round(be / 144 * 100) + '% mínimo)'
+  const uel = document.getElementById('be-util')
+  uel.textContent  = '$' + (m0.util / 1000000).toFixed(2) + 'M'
+  uel.style.color  = m0.util >= 0 ? 'var(--green)' : 'var(--red)'
+  document.getElementById('be-anual').textContent = '$' + (annualUtil / 1000000).toFixed(1) + 'M'
+
+  const mg = m0.ti > 0 ? (m0.util / m0.ti * 100).toFixed(1) : 0
+  const insight = m0.util > 2000000
+    ? `Con ${occ}% de ocupación se genera una utilidad de $${(m0.util/1000000).toFixed(2)}M/mes (margen ${mg}%). Foco: retención de locatarios y subida de renta en renovaciones.`
+    : m0.util > 0
+    ? `Margen de ${mg}% es ajustado. Subir ocupación a ${Math.min(100,occ+5)}% generaría ingresos adicionales. Prioridad: llenar los ${144-Math.round(144*occ/100)} locales vacantes.`
+    : `Alerta: pérdida de $${(Math.abs(m0.util)/1000000).toFixed(2)}M/mes. Necesitas al menos ${be} locales ocupados para cubrir costos.`
+  document.getElementById('insightTxt').textContent = insight
+
+  if (projChart) {
+    projChart.data.datasets[0].data = ing
+    projChart.data.datasets[1].data = gas
+    projChart.data.datasets[2].data = util
+    projChart.update('none')
+  } else {
+    projChart = new Chart('projC', {
+      type:'line',
+      data:{
+        labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+        datasets:[
+          { label:'Ingreso',  data:ing,  borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,0.08)', fill:true, tension:.4, pointRadius:2, borderWidth:2 },
+          { label:'Gastos',   data:gas,  borderColor:'#E24B4A', backgroundColor:'rgba(226,75,74,0.06)',  fill:true, tension:.4, pointRadius:2, borderWidth:2 },
+          { label:'Utilidad', data:util, borderColor:'#185FA5', backgroundColor:'rgba(24,95,165,0.08)',  fill:true, tension:.4, pointRadius:2, borderWidth:2 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>'$'+c.parsed.y.toFixed(2)+'M'}} },
+        scales:{
+          x:{ ticks:{color:tcol,font:{size:10},autoSkip:false,maxRotation:0}, grid:{display:false}, border:{display:false} },
+          y:{ ticks:{color:tcol,font:{size:10},callback:v=>'$'+v+'M'}, grid:{color:gcol}, border:{display:false} }
+        }
+      }
+    })
+  }
+}
+
+function loadScenario(sc, btn) {
+  const cfg = {
+    pesimista:  { occ:70,  rent:650, exp:3500, gr:0 },
+    base:       { occ:94,  rent:750, exp:3500, gr:3 },
+    optimista:  { occ:100, rent:900, exp:3200, gr:5 }
+  }
+  const c = cfg[sc]
+  document.getElementById('s-occ').value  = c.occ
+  document.getElementById('s-rent').value = c.rent
+  document.getElementById('s-exp').value  = c.exp
+  document.getElementById('s-gr').value   = c.gr
+  document.querySelectorAll('.scp').forEach(b => b.classList.remove('on'))
+  if (btn) btn.classList.add('on')
+  updateProj()
+}
+
+/* ============================================
+   EXPORTAR REPORTE (básico en modo demo)
+   ============================================ */
+function exportarReporte() {
+  const now    = new Date()
+  const mes    = now.toLocaleDateString('es-CL', { month:'long', year:'numeric' })
+  const linea  = '─'.repeat(50)
+  const report = `CC ADMIN — INFORME MENSUAL ${mes.toUpperCase()}
+${linea}
+EDIFICIO: Plaza Lo Castillo
+Dirección: Candelaria Goyenechea 3820, Vitacura
+
+KPIs PRINCIPALES
+${linea}
+Ingresos del mes:        $8,500,000 CLP
+Locales ocupados:        94% (135 de 144)
+G.C. pendientes:         12% — 8 locales
+Tickets mantenimiento:   5 abiertos (2 urgentes)
+
+ESTADO DE PAGOS
+${linea}
+Locales en mora +3 meses: 3
+Locales alerta 1-2 meses: 5
+Locales al día:           127
+
+CONTRATOS
+${linea}
+Por vencer próximos 90 días: 4
+Vencidos sin renovar:        2
+
+MANTENIMIENTO
+${linea}
+Inspección eléctrica:    COMPLETADO
+Revisión ascensor:       EN CURSO (45%)
+Ascensor piso 2:         URGENTE — fuera de servicio
+
+${linea}
+Generado por CC Admin v1.0 · ${now.toLocaleString('es-CL')}
+Conecta Supabase para datos reales en tiempo real.`
+
+  const blob = new Blob([report], { type:'text/plain;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `informe_plc_${now.getFullYear()}_${String(now.getMonth()+1).padStart(2,'0')}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/* ============================================
+   RELOJ Y HORA
+   ============================================ */
+function updateClock() {
+  const now = new Date()
+  const t   = now.toLocaleTimeString('es-CL', { hour:'2-digit', minute:'2-digit' })
+  const el  = document.getElementById('footer-time')
+  if (el) el.textContent = t
+  const pt  = document.getElementById('park-time')
+  if (pt) pt.textContent = t
+}
+
+/* ============================================
+   INICIALIZACIÓN
+   ============================================ */
+renderFloor()
+renderSem()
+renderContratos()
+renderParking()
+updateProj()
+updateClock()
+setInterval(updateClock, 60000)
+initSupabase()
+</script>
+<!-- ============================================
+     MODAL — Agregar / editar evento
+     ============================================ -->
+<div id="evtModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--bg0);border-radius:var(--r-lg);padding:20px;width:360px;max-width:92vw;border:0.5px solid var(--bd2);box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-size:14px;font-weight:500">Nuevo evento</span>
+      <i class="ti ti-x" style="font-size:18px;cursor:pointer;color:var(--tx1);padding:3px" onclick="closeAddEvent()"></i>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:11px;color:var(--tx1);display:block;margin-bottom:4px">Título *</label>
+        <input id="evt-title" type="text" placeholder="Ej: Revisión ascensor" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);font-size:12px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--tx1);display:block;margin-bottom:4px">Categoría</label>
+        <select id="evt-cat" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);font-size:12px;outline:none">
+          <option value="mantenimiento">🔧 Mantenimiento</option>
+          <option value="contrato">📄 Contrato</option>
+          <option value="marketing">🎉 Marketing / Evento</option>
+          <option value="reunion">👥 Reunión</option>
+          <option value="incidencia">⚠️ Incidencia</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:11px;color:var(--tx1);display:block;margin-bottom:4px">Fecha inicio *</label>
+          <input id="evt-start" type="date" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);font-size:12px;outline:none">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--tx1);display:block;margin-bottom:4px">Fecha fin *</label>
+          <input id="evt-end" type="date" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);font-size:12px;outline:none">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--tx1);display:block;margin-bottom:4px">Notas</label>
+        <textarea id="evt-notes" rows="2" placeholder="Empresa, local, descripción..." style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--r-md);background:var(--bg1);color:var(--tx0);font-size:12px;outline:none;resize:none;font-family:inherit"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button onclick="closeAddEvent()" style="padding:8px 16px;border-radius:var(--r-md);border:0.5px solid var(--bd2);background:transparent;cursor:pointer;font-size:12px;color:var(--tx0)">Cancelar</button>
+        <button onclick="saveEvent()" style="padding:8px 16px;border-radius:var(--r-md);border:none;background:var(--blue);cursor:pointer;font-size:12px;color:#fff;font-weight:500">Guardar evento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================
+   CALENDARIO + GANTT
+   ============================================ */
+let calYear = new Date().getFullYear()
+let calMonth = new Date().getMonth()
+let selDate = null
+
+const CATS = {
+  mantenimiento: { color:'#EF9F27', label:'Mantenimiento', icon:'ti-tool' },
+  contrato:      { color:'#185FA5', label:'Contrato',      icon:'ti-file-text' },
+  marketing:     { color:'#1D9E75', label:'Marketing',     icon:'ti-speakerphone' },
+  reunion:       { color:'#7F77DD', label:'Reunión',       icon:'ti-users' },
+  incidencia:    { color:'#E24B4A', label:'Incidencia',    icon:'ti-alert-triangle' },
+}
+
+let EVENTS = [
+  { id:1, title:'Revisión ascensor central', cat:'mantenimiento', start:'2026-05-09', end:'2026-05-23', notes:'Schindler' },
+  { id:2, title:'Feria de joyería',          cat:'marketing',     start:'2026-05-16', end:'2026-05-17', notes:'Plaza central' },
+  { id:3, title:'Limpieza techos',           cat:'mantenimiento', start:'2026-05-23', end:'2026-05-24', notes:'' },
+  { id:4, title:'Sistema contra incendios',  cat:'mantenimiento', start:'2026-05-30', end:'2026-05-30', notes:'' },
+  { id:5, title:'Reunión locatarios',        cat:'reunion',       start:'2026-05-31', end:'2026-05-31', notes:'Sala de eventos' },
+  { id:6, title:'Contrato L-103 vence',      cat:'contrato',      start:'2026-06-30', end:'2026-06-30', notes:'Mantelería Fina' },
+  { id:7, title:'Pintura pasillos',          cat:'mantenimiento', start:'2026-06-15', end:'2026-06-18', notes:'' },
+  { id:8, title:'Fumigación general',        cat:'mantenimiento', start:'2026-07-01', end:'2026-07-01', notes:'' },
+  { id:9, title:'Revisión gas',              cat:'mantenimiento', start:'2026-07-10', end:'2026-07-10', notes:'' },
+]
+
+// CSS para botones del calendario
+const calStyle = document.createElement('style')
+calStyle.textContent = `
+  .cal-nav{width:24px;height:24px;border-radius:var(--r-md);border:0.5px solid var(--bd2);background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--tx1);font-size:14px}
+  .cal-nav:hover{background:var(--bg1)}
+  .cal-day{min-height:50px;border-radius:var(--r-md);padding:5px 4px;cursor:pointer;background:var(--bg1);border:0.5px solid transparent;transition:background .12s}
+  .cal-day:hover{background:var(--bg2)}
+  .cal-today{background:var(--green-lt) !important;border-color:var(--green) !important}
+  .cal-sel{background:var(--blue-lt) !important;border-color:var(--blue) !important}
+`
+document.head.appendChild(calStyle)
+
+function renderCalendar() {
+  const DNAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+  const d0 = new Date(calYear, calMonth, 1)
+  const dN = new Date(calYear, calMonth+1, 0).getDate()
+  const today = new Date()
+  const ts = d0.toLocaleDateString('es-CL', {month:'long', year:'numeric'})
+  document.getElementById('calTitle').textContent = ts.charAt(0).toUpperCase() + ts.slice(1)
+
+  let h = DNAMES.map(d =>
+    `<div style="text-align:center;font-size:10px;font-weight:500;color:var(--tx2);padding:3px 0">${d}</div>`
+  ).join('')
+
+  const first = d0.getDay()
+  const offset = first === 0 ? 6 : first - 1
+  for (let i = 0; i < offset; i++) h += `<div></div>`
+
+  for (let day = 1; day <= dN; day++) {
+    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+    const isT = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===day
+    const isS = selDate === ds
+    const dow = new Date(calYear, calMonth, day).getDay()
+    const isW = dow === 0 || dow === 6
+    const evts = EVENTS.filter(e => e.start <= ds && e.end >= ds)
+    const dots = evts.slice(0,4).map(e =>
+      `<div style="width:5px;height:5px;border-radius:50%;background:${CATS[e.cat]?.color||'#888'};flex-shrink:0"></div>`
+    ).join('')
+    const txtc = isS?'var(--blue-dk)':isT?'var(--green-dk)':isW?'var(--blue)':'var(--tx0)'
+    const cls  = 'cal-day' + (isT?' cal-today':'') + (isS?' cal-sel':'')
+    h += `<div class="${cls}" onclick="selectDay('${ds}')">
+      <div style="font-size:12px;font-weight:${isT||isS?'500':'400'};color:${txtc};margin-bottom:3px">${day}</div>
+      <div style="display:flex;gap:2px;flex-wrap:wrap">${dots}</div>
+    </div>`
+  }
+
+  document.getElementById('calGrid').innerHTML = h
+  renderGantt()
+}
+
+function selectDay(ds) {
+  selDate = ds
+  const evts = EVENTS.filter(e => e.start <= ds && e.end >= ds)
+  const d = new Date(ds + 'T12:00:00')
+  const lbl = d.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long'})
+  let c = `<div style="font-size:12px;font-weight:500;margin-bottom:8px;color:var(--tx0);text-transform:capitalize;line-height:1.3">${lbl}</div>`
+
+  if (!evts.length) {
+    c += `<div style="font-size:11px;color:var(--tx1);padding:8px 0">Sin eventos este día</div>`
+  } else {
+    evts.forEach(e => {
+      const cat = CATS[e.cat] || CATS.mantenimiento
+      c += `<div style="display:flex;align-items:flex-start;gap:7px;padding:6px 0;border-bottom:0.5px solid var(--bd)">
+        <i class="ti ${cat.icon}" style="font-size:13px;color:${cat.color};flex-shrink:0;margin-top:1px"></i>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500">${e.title}</div>
+          <div style="font-size:10px;color:var(--tx1);margin-top:1px">${e.notes || cat.label}</div>
+        </div>
+        <i class="ti ti-trash" style="font-size:13px;color:var(--tx2);cursor:pointer;flex-shrink:0;padding:2px" onclick="deleteEvent(${e.id})" title="Eliminar"></i>
+      </div>`
+    })
+  }
+  c += `<button onclick="openAddEventDate('${ds}')" style="width:100%;margin-top:8px;padding:6px;border-radius:var(--r-md);border:0.5px dashed var(--bd2);background:transparent;cursor:pointer;font-size:11px;color:var(--tx1);display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-plus" style="font-size:12px"></i>Agregar evento aquí</button>`
+
+  document.getElementById('dayDetail').innerHTML = c
+  renderCalendar()
+}
+
+function renderGantt() {
+  const dN = new Date(calYear, calMonth+1, 0).getDate()
+  const ms = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`
+  const me = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dN).padStart(2,'0')}`
+  const evts = EVENTS.filter(e => e.start <= me && e.end >= ms)
+  const wrap = document.getElementById('ganttWrap')
+
+  if (!evts.length) {
+    wrap.innerHTML = `<div style="padding:10px;text-align:center;font-size:11px;color:var(--tx1)">No hay eventos este mes — agrega uno con el botón de arriba</div>`
+    return
+  }
+
+  const today = new Date()
+  const todayD = (today.getFullYear()===calYear && today.getMonth()===calMonth) ? today.getDate() : -1
+
+  // Header días
+  let dayH = `<div style="display:flex;margin-left:155px;margin-bottom:4px">`
+  for (let d = 1; d <= dN; d++) {
+    const isT = d === todayD
+    const dow = new Date(calYear, calMonth, d).getDay()
+    const isW = dow === 0 || dow === 6
+    dayH += `<div style="flex:1;text-align:center;font-size:9px;color:${isT?'var(--blue)':isW?'var(--tx2)':'var(--tx2)'};font-weight:${isT?'600':'400'}">${d}</div>`
+  }
+  dayH += '</div>'
+
+  let rows = ''
+  evts.forEach(e => {
+    const cat  = CATS[e.cat] || CATS.mantenimiento
+    const eS   = new Date(Math.max(+new Date(e.start+'T12:00:00'), +new Date(calYear, calMonth, 1)))
+    const eE   = new Date(Math.min(+new Date(e.end+'T12:00:00'),   +new Date(calYear, calMonth, dN)))
+    const sD   = eS.getDate(), eD = eE.getDate()
+    const left = ((sD - 1) / dN * 100).toFixed(2)
+    const wid  = ((eD - sD + 1) / dN * 100).toFixed(2)
+    const todayPct = todayD > 0 ? ((todayD - 0.5) / dN * 100).toFixed(2) : null
+
+    rows += `<div style="display:flex;align-items:center;margin-bottom:3px">
+      <div style="width:155px;flex-shrink:0;display:flex;align-items:center;gap:5px;padding-right:8px;overflow:hidden">
+        <i class="ti ${cat.icon}" style="font-size:11px;color:${cat.color};flex-shrink:0"></i>
+        <span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx0)" title="${e.title}">${e.title}</span>
+      </div>
+      <div style="flex:1;position:relative;height:18px;background:var(--bg2);border-radius:3px;overflow:hidden">
+        ${todayPct?`<div style="position:absolute;left:${todayPct}%;top:0;bottom:0;width:1.5px;background:var(--blue);opacity:.6;z-index:2"></div>`:''}
+        <div style="position:absolute;left:${left}%;width:${wid}%;height:100%;background:${cat.color};border-radius:3px;opacity:.82" title="${e.title}  (${e.start} → ${e.end})"></div>
+      </div>
+    </div>`
+  })
+
+  wrap.innerHTML = dayH + rows
+}
+
+function prevMonth() {
+  if (calMonth === 0) { calMonth=11; calYear-- } else calMonth--
+  selDate = null
+  document.getElementById('dayDetail').innerHTML = `<div style="font-size:11px;color:var(--tx1);text-align:center;padding:12px 0">Selecciona un día</div>`
+  renderCalendar()
+}
+
+function nextMonth() {
+  if (calMonth === 11) { calMonth=0; calYear++ } else calMonth++
+  selDate = null
+  document.getElementById('dayDetail').innerHTML = `<div style="font-size:11px;color:var(--tx1);text-align:center;padding:12px 0">Selecciona un día</div>`
+  renderCalendar()
+}
+
+function openAddEvent() {
+  const today = new Date().toISOString().split('T')[0]
+  document.getElementById('evt-start').value = selDate || today
+  document.getElementById('evt-end').value   = selDate || today
+  document.getElementById('evt-title').value = ''
+  document.getElementById('evt-notes').value = ''
+  document.getElementById('evtModal').style.display = 'flex'
+}
+
+function openAddEventDate(ds) {
+  document.getElementById('evt-start').value = ds
+  document.getElementById('evt-end').value   = ds
+  document.getElementById('evt-title').value = ''
+  document.getElementById('evt-notes').value = ''
+  document.getElementById('evtModal').style.display = 'flex'
+}
+
+function closeAddEvent() {
+  document.getElementById('evtModal').style.display = 'none'
+}
+
+function saveEvent() {
+  const title = document.getElementById('evt-title').value.trim()
+  const cat   = document.getElementById('evt-cat').value
+  const start = document.getElementById('evt-start').value
+  const end   = document.getElementById('evt-end').value
+  const notes = document.getElementById('evt-notes').value.trim()
+
+  if (!title)         { alert('El título es obligatorio'); return }
+  if (!start || !end) { alert('Las fechas son obligatorias'); return }
+  if (end < start)    { alert('La fecha de fin no puede ser anterior al inicio'); return }
+
+  const evt = { id: Date.now(), title, cat, start, end, notes }
+  EVENTS.push(evt)
+
+  // Guardar en Supabase si está conectado
+  if (db) {
+    db.from('eventos').insert({
+      titulo: title, categoria: cat,
+      fecha_inicio: start, fecha_fin: end, notas: notes
+    }).then(({ error }) => { if (error) console.warn('Supabase:', error.message) })
+  }
+
+  closeAddEvent()
+  if (selDate) selectDay(selDate)
+  else renderCalendar()
+}
+
+function deleteEvent(id) {
+  if (!confirm('¿Eliminar este evento?')) return
+  EVENTS = EVENTS.filter(e => e.id !== id)
+  if (db) db.from('eventos').delete().eq('id', id)
+  if (selDate) selectDay(selDate)
+  else renderCalendar()
+}
+
+// Cerrar modal clickeando el fondo
+document.getElementById('evtModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAddEvent()
+})
+
+renderCalendar()
+</script>
+
+</body>
+</html>
