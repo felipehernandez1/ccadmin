@@ -1,0 +1,12 @@
+.env
+.env.local
+*.backup.html
+*.bak
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/
+npm-debug.log
+logs/
+*.log
