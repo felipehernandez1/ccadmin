@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC Admin · Plaza Lo Castillo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.14.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg0:#fff;--bg1:#f5f4ef;--bg2:#eceae3;
+  --tx0:#1c1c1a;--tx1:#5f5f5a;--tx2:#9b9990;
+  --bd:rgba(0,0,0,.09);--bd2:rgba(0,0,0,.16);
+  --blue:#185FA5;--blt:#E6F1FB;--bdk:#0C447C;
+  --green:#1D9E75;--glt:#EAF3DE;--gdk:#085041;
+  --amber:#EF9F27;--alt:#FAEEDA;--adk:#633806;
+  --red:#E24B4A;--rlt:#FCEBEB;--rdk:#791F1F;
+  --purple:#7F77DD;--plt:#EEEDFE;--pdk:#3C3489;
+  --r:10px;--rl:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg0:#1c1c1a;--bg1:#252521;--bg2:#2e2e2a;
+  --tx0:#e8e6df;--tx1:#9b9990;--tx2:#5f5f5a;
+  --bd:rgba(255,255,255,.09);--bd2:rgba(255,255,255,.18);
+  --blt:#0c2a45;--glt:#0a2b1e;--alt:#2d1f06;--rlt:#2d0f0f;--plt:#1a1842;
+  --bdk:#85B7EB;--gdk:#5DCAA5;--adk:#FAC775;--rdk:#F09595;--pdk:#AFA9EC;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:var(--tx0);background:var(--bg1)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.wrap{display:flex;min-height:100vh}
+.sb{width:205px;flex-shrink:0;background:var(--bg0);border-right:.5px solid var(--bd);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.page{flex:1;min-width:0}
+.topbar{background:var(--bg0);border-bottom:.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.sec{display:none}.sec.on{display:block}
+.cnt{padding:20px;display:flex;flex-direction:column;gap:16px}
+.brand{padding:14px 16px;border-bottom:.5px solid var(--bd);display:flex;align-items:center;gap:9px}
+.bico{width:32px;height:32px;border-radius:9px;background:var(--blue);display:grid;place-items:center;flex-shrink:0}
+.nav{flex:1;padding:8px 6px}
+.ns{font-size:11px;color:var(--tx2);padding:10px 10px 4px;letter-spacing:.06em;font-weight:600;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r);cursor:pointer;font-size:14px;color:var(--tx1);margin-bottom:2px;transition:all .12s;user-select:none;border:none;background:transparent;width:100%;text-align:left}
+.ni:hover{background:var(--bg2);color:var(--tx0)}
+.ni.on{background:var(--blt);color:var(--bdk);font-weight:600}
+.ni i{font-size:16px;flex-shrink:0}
+.nbadge{margin-left:auto;background:var(--rlt);color:var(--rdk);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600}
+.sbst{padding:10px 14px;border-top:.5px solid var(--bd)}
+.sbsr{display:flex;justify-content:space-between;font-size:11px;color:var(--tx1);margin-bottom:4px}
+.prg{height:5px;border-radius:3px;background:var(--bd);overflow:hidden}
+.prf{height:5px;border-radius:3px;background:var(--green)}
+.sbu{padding:10px 14px;border-top:.5px solid var(--bd);display:flex;align-items:center;gap:9px}
+.sbav{width:28px;height:28px;border-radius:50%;background:var(--blt);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--bdk);flex-shrink:0}
+.tbtl{font-size:16px;font-weight:700;flex:1}
+.tbs{border:.5px solid var(--bd2);border-radius:var(--r);padding:8px 13px;font-size:14px;width:230px;background:var(--bg1);color:var(--tx0);outline:none;font-family:inherit}
+.tbs:focus{border-color:var(--blue)}
+.ib{width:32px;height:32px;border-radius:var(--r);border:.5px solid var(--bd);display:grid;place-items:center;cursor:pointer;color:var(--tx1);background:transparent;position:relative;flex-shrink:0;font-size:16px}
+.ib:hover{background:var(--bg1)}
+.nd{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg0)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--blt);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--bdk);flex-shrink:0}
+.cp{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:500;white-space:nowrap}
+.cok{background:var(--glt);color:var(--gdk)}.coff{background:var(--alt);color:var(--adk)}
+.card{background:var(--bg0);border:.5px solid var(--bd);border-radius:var(--rl);padding:18px 20px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.ct{font-size:15px;font-weight:700}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.g3{display:grid;grid-template-columns:5fr 3fr 3fr;gap:14px;align-items:start}
+.gcol{display:flex;flex-direction:column;gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kc{border-radius:var(--rl);padding:16px 18px;position:relative;overflow:hidden}
+.kl{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.kv{font-size:26px;font-weight:700;line-height:1}.ks{font-size:12px;margin-top:5px}
+.ki{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:36px;opacity:.12}
+.tag{display:inline-block;font-size:12px;padding:3px 9px;border-radius:10px;font-weight:600}
+.tg{background:var(--glt);color:var(--gdk)}.ty{background:var(--alt);color:var(--adk)}
+.tr{background:var(--rlt);color:var(--rdk)}.tb2{background:var(--blt);color:var(--bdk)}.tn{background:var(--bg2);color:var(--tx1)}
+.bprim{background:var(--blue);color:#fff;border:none;padding:10px 16px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.bprim:hover{background:var(--bdk)}
+.bsec{background:var(--bg1);color:var(--tx0);border:.5px solid var(--bd2);padding:9px 14px;border-radius:var(--r);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit}
+.bsec:hover{background:var(--bg2)}
+.bdng{background:var(--rlt);color:var(--rdk);border:none;padding:6px 10px;border-radius:var(--r);font-size:12px;cursor:pointer;font-family:inherit}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:22px;font-weight:800}
+.floor-tabs{display:flex;gap:0;border-bottom:.5px solid var(--bd);margin-bottom:12px}
+.ftb{font-size:13px;padding:7px 14px;cursor:pointer;color:var(--tx1);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:all .12s;font-weight:500;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.ftb.on{color:var(--bdk);border-bottom-color:var(--blue);font-weight:700}
+.lfloor{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:4px}
+.lc{height:42px;border-radius:5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;transition:all .15s;padding:2px}
+.lc:hover{opacity:.75;transform:scale(1.1);z-index:10;position:relative}
+.leg{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.li{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx1)}
+.ld{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.dtbl{width:100%;border-collapse:collapse;font-size:14px}
+.dtbl th{font-size:12px;color:var(--tx2);font-weight:600;padding:8px 12px;text-align:left;border-bottom:.5px solid var(--bd)}
+.dtbl td{padding:11px 12px;border-bottom:.5px solid var(--bd)}
+.dtbl tr:last-child td{border-bottom:none}.dtbl tr:hover td{background:var(--bg1)}
+.park-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.pc{height:36px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;transition:all .15s}
+.pc:hover{opacity:.75;transform:scale(1.06);z-index:5;position:relative}
+.cal-day{min-height:80px;border-radius:var(--r);padding:7px;cursor:pointer;background:var(--bg1);border:.5px solid transparent;overflow:hidden;transition:background .12s}
+.cal-day:hover{background:var(--bg2)}
+.cal-today{background:var(--glt)!important;border-color:var(--green)!important}
+.cal-sel{background:var(--blt)!important;border-color:var(--blue)!important}
+.cal-evt{font-size:11px;font-weight:600;padding:2px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.cal-nav{width:28px;height:28px;border-radius:var(--r);border:.5px solid var(--bd2);background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--tx1);font-size:16px;font-family:inherit}
+#tooltip{display:none;position:fixed;background:var(--bg0);border:.5px solid var(--bd2);border-radius:var(--rl);padding:12px 15px;font-size:12px;z-index:9999;pointer-events:none;min-width:200px;max-width:280px;box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.tt-title{font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:.5px solid var(--bd)}
+.tt-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:var(--tx1)}
+.tt-row i{font-size:13px;flex-shrink:0;color:var(--tx2)}
+.mbg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.mbox{background:var(--bg0);border-radius:var(--rl);padding:22px;width:460px;max-width:94vw;max-height:90vh;overflow-y:auto;border:.5px solid var(--bd2);box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mtitle{font-size:16px;font-weight:700}
+.mbody{display:flex;flex-direction:column;gap:11px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:13px;color:var(--tx1);font-weight:500}
+.fi{padding:10px 13px;border:.5px solid var(--bd2);border-radius:var(--r);background:var(--bg1);color:var(--tx0);font-size:14px;outline:none;font-family:inherit;width:100%}
+.fi:focus{border-color:var(--blue)}
+.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.drop-zone{border:2px dashed var(--bd2);border-radius:var(--rl);padding:40px 20px;text-align:center;cursor:pointer;background:var(--bg1);transition:all .2s}
+.drop-zone.over{border-color:var(--blue);background:var(--blt)}
+.drop-zone i{font-size:46px;color:var(--tx2);display:block;margin-bottom:12px}
+.pcw{display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start}
+.pcc{background:var(--bg1);border:.5px solid var(--bd);border-radius:var(--rl);padding:16px}
+input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
+.beb{background:var(--bg0);border-radius:var(--r);padding:10px 12px;margin-bottom:7px;border:.5px solid var(--bd)}
+.ins{background:var(--blt);border:.5px solid var(--blue);border-radius:var(--rl);padding:14px;margin-top:12px}
+.mc{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:.5px solid var(--bd)}
+.mc:last-child{border-bottom:none}
+.mcd{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.tkr{display:flex;justify-content:space-between;padding:9px 0;border-bottom:.5px solid var(--bd);font-size:13px}
+.tkr:last-child{border-bottom:none}
+.rptg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ritem{border:.5px solid var(--bd);border-radius:var(--rl);padding:16px;cursor:pointer;transition:all .15s;background:var(--bg0)}
+.ritem:hover{border-color:var(--blue);background:var(--blt)}
+.ftabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.ftab{font-size:13px;padding:5px 12px;border-radius:var(--r);border:.5px solid var(--bd);background:transparent;color:var(--tx1);cursor:pointer;font-family:inherit}
+.ftab.on{background:var(--blt);color:var(--bdk);border-color:transparent}
+.map-sel{padding:6px 9px;border:.5px solid var(--bd2);border-radius:var(--r);background:var(--bg1);color:var(--tx0);font-size:13px;outline:none;width:100%;font-family:inherit}
+.map-sel.mapped{border-color:var(--green);background:var(--glt)}
+.pvw-tbl{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.pvw-tbl th{font-size:11px;color:var(--tx2);font-weight:600;padding:5px 8px;border-bottom:.5px solid var(--bd);background:var(--bg1)}
+.pvw-tbl td{padding:6px 8px;border-bottom:.5px solid var(--bd)}
+.imp-prog{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;margin:10px 0}
+.imp-prog-f{height:8px;border-radius:4px;background:var(--blue);transition:width .3s}
+.vit-entry{display:flex;gap:14px;padding:12px 0;border-bottom:.5px solid var(--bd)}
+.vit-entry:last-child{border-bottom:none}
+.vit-ico{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-size:18px}
+.ai-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#185FA5,#7F77DD);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(24,95,165,.4);z-index:500}
+.ai-btn:hover{transform:scale(1.08)}
+.ai-panel{position:fixed;bottom:90px;right:24px;width:380px;max-width:calc(100vw - 48px);height:520px;max-height:calc(100vh - 120px);background:var(--bg0);border:.5px solid var(--bd2);border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:501;display:none;flex-direction:column;overflow:hidden}
+.ai-panel.open{display:flex}
+.ai-hdr{padding:14px 16px;background:linear-gradient(135deg,#185FA5,#7F77DD);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{max-width:88%;border-radius:14px;padding:10px 13px;font-size:13px;line-height:1.55}
+.ai-msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.bot{background:var(--bg1);color:var(--tx0);align-self:flex-start;border-bottom-left-radius:4px;border:.5px solid var(--bd)}
+.ai-msg.loading{background:var(--bg1);color:var(--tx1);align-self:flex-start;font-style:italic}
+.ai-input-row{padding:12px;border-top:.5px solid var(--bd);display:flex;gap:8px;flex-shrink:0}
+.ai-input{flex:1;padding:10px 13px;border:.5px solid var(--bd2);border-radius:20px;font-size:13px;outline:none;background:var(--bg1);color:var(--tx0);font-family:inherit}
+.ai-input:focus{border-color:var(--blue)}
+.ai-send{width:38px;height:38px;border-radius:50%;background:var(--blue);border:none;cursor:pointer;display:grid;place-items:center;flex-shrink:0;color:#fff;font-size:16px}
+.ai-chips{padding:0 14px 8px;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.ai-chip{font-size:11px;padding:4px 10px;border-radius:10px;border:.5px solid var(--bd2);background:var(--bg1);cursor:pointer;color:var(--tx1);white-space:nowrap;font-family:inherit}
+.ai-chip:hover{background:var(--blt);color:var(--bdk);border-color:var(--blue)}
+.hamburger{display:none;width:32px;height:32px;border-radius:var(--r);border:.5px solid var(--bd);background:transparent;cursor:pointer;align-items:center;justify-content:center;font-size:18px;color:var(--tx1);flex-shrink:0}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:998}
+.sb-overlay.show{display:block}
+@media(max-width:900px){
+  .wrap{flex-direction:column}
+  .sb{display:flex;position:fixed;top:0;left:0;bottom:0;z-index:999;width:240px;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.18)}
+  .sb.open{transform:translateX(0)}
+  .hamburger{display:flex}
+  .tbs{width:120px;min-width:0}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.pcw{grid-template-columns:1fr}
+  .rptg{grid-template-columns:repeat(2,1fr)}
+  .lfloor{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  .mbox{width:94vw!important;max-width:94vw!important}
+  .gantt-label{width:120px}
+  .gantt-ruler{margin-left:120px}
+  .dtbl{font-size:13px}
+}
+@media(max-width:480px){
+  .tbs{display:none}
+  .topbar{padding:10px 12px;gap:8px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .cnt{padding:12px}
+  .gantt-label{width:90px}
+  .gantt-ruler{margin-left:90px}
+  .gantt-label-text{font-size:12px}
+}
+
+/* ── GANTT EJECUTIVO · NUEVA GENERACIÓN ──────────────── */
+.gantt-wrap{display:flex;flex-direction:column;gap:0;padding:4px 2px}
+.gantt-ruler{display:flex;margin-left:210px;padding-bottom:10px;margin-bottom:6px;position:relative}
+.gantt-ruler-day{flex:1;text-align:center;font-size:10.5px;color:var(--tx2);font-weight:600;letter-spacing:.01em;position:relative}
+.gantt-ruler-day.today{color:var(--blue);font-weight:800}
+.gantt-ruler-day.weekend{opacity:.45}
+.gantt-row{display:flex;align-items:center;padding:10px 0;border-radius:10px;transition:background .15s}
+.gantt-row:hover{background:var(--bg1)}
+.gantt-label{width:210px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding-right:16px;overflow:hidden}
+.gantt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;position:relative}
+.gantt-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:currentColor;opacity:.18}
+.gantt-label-text{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx0);letter-spacing:-.01em}
+.gantt-label-text.done{color:var(--tx2);text-decoration:line-through;text-decoration-color:var(--bd2);text-decoration-thickness:1.5px}
+.gantt-track{flex:1;position:relative;height:30px}
+.gantt-track-bg{position:absolute;inset:0;border-radius:8px;background:var(--bg1);border:.5px solid var(--bd)}
+.gantt-track-inner{position:absolute;inset:0;border-radius:8px;overflow:hidden}
+.gantt-bar{position:absolute;top:4px;bottom:4px;border-radius:7px;display:flex;align-items:center;padding:0 10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.06);transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s;cursor:pointer}
+.gantt-bar:hover{transform:translateY(-1.5px) scaleY(1.1);box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:6}
+.gantt-bar-txt{font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.3);letter-spacing:.01em}
+.gantt-today-line{position:absolute;top:-6px;bottom:-6px;width:2px;background:linear-gradient(180deg,var(--blue),transparent);z-index:5}
+.gantt-today-line::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px var(--blt)}
+.gantt-today-line::after{content:'HOY';position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;background:var(--blue);padding:2px 6px;border-radius:5px;white-space:nowrap;letter-spacing:.03em}
+.gantt-empty{text-align:center;padding:48px 20px;color:var(--tx1)}
+.gantt-empty i{font-size:40px;opacity:.25;display:block;margin-bottom:12px}
+.gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)}
+.gantt-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx1);font-weight:600}
+.gantt-legend-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+
+/* ── HORARIOS DEL PERSONAL ───────────────────────────── */
+.turno-cell{min-width:96px;cursor:pointer;border-radius:9px;padding:8px;transition:background .15s;text-align:center}
+.turno-cell:hover{background:var(--blt)}
+.turno-chip{display:inline-block;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;background:linear-gradient(135deg,var(--blue),#2a73c4);color:#fff;white-space:nowrap;box-shadow:0 1px 3px rgba(24,95,165,.3)}
+.turno-empty{font-size:11px;color:var(--tx2);font-style:italic;display:inline-block;padding:5px 8px;border-radius:8px;border:1.5px dashed var(--bd2)}
+.staff-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--bd)}
+.staff-row:last-child{border-bottom:none}
+.staff-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#7F77DD);display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0;box-shadow:0 2px 6px rgba(24,95,165,.25)}
+
+/* ── ESTADO PAGO GC EN LOCAL ──────────────────────────── */
+#l-gc-badge{box-shadow:0 1px 3px rgba(0,0,0,.05)}
+</style>
+</head>
+<body>
+<div id="tooltip"><div class="tt-title" id="tt-title"></div><div id="tt-body"></div><div style="margin-top:6px;padding-top:5px;border-top:.5px solid var(--bd);font-size:11px;color:var(--tx2)"><i class="ti ti-pencil" style="font-size:11px"></i> Clic para editar</div></div>
+<div class="wrap">
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+<aside class="sb" id="sidebar">
+  <div class="brand">
+    <div class="bico"><i class="ti ti-building-store" style="font-size:16px;color:#fff"></i></div>
+    <div><div style="font-size:14px;font-weight:700">CC Admin</div><div style="font-size:11px;color:var(--tx1)">Administración</div></div>
+  </div>
+  <nav class="nav">
+    <div class="ns">Principal</div>
+    <button class="ni on" onclick="navTo('inicio',this)"><i class="ti ti-home"></i>Inicio</button>
+    <button class="ni" onclick="navTo('locales',this)"><i class="ti ti-building"></i>Locales</button>
+    <button class="ni" onclick="navTo('locatarios',this)"><i class="ti ti-users"></i>Locatarios</button>
+    <div class="ns">Gestión</div>
+    <button class="ni" onclick="navTo('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
+    <div class="ns">Operaciones</div>
+    <button class="ni" onclick="navTo('mantenimiento',this)"><i class="ti ti-tool"></i>Mantenimiento<span class="nbadge" id="nb-mant">0</span></button>
+    <button class="ni" onclick="navTo('estacionamiento',this)"><i class="ti ti-car"></i>Estacionamiento</button>
+    <div class="ns">Operación</div>
+    <button class="ni" onclick="navTo('horarios',this)"><i class="ti ti-clock-hour-4"></i>Horarios</button>
+    <button class="ni" onclick="navTo('calendario',this)"><i class="ti ti-calendar"></i>Calendario</button>
+    <button class="ni" onclick="navTo('vitacora',this)"><i class="ti ti-notebook"></i>Vitácora</button>
+    <button class="ni" onclick="navTo('importar',this)"><i class="ti ti-upload"></i>Importar datos</button>
+    <button class="ni" onclick="navTo('config',this)"><i class="ti ti-settings"></i>Configuración</button>
+  </nav>
+  <div class="sbst">
+    <div class="sbsr"><span>Ocupación</span><span style="font-weight:600" id="sb-occ">—</span></div>
+    <div class="prg"><div class="prf" id="sb-bar" style="width:0%"></div></div>
+  </div>
+  <div class="sbu"><div class="sbav">AD</div><div><div style="font-size:12px;font-weight:600">Administrador</div><div style="font-size:11px;color:var(--tx1)">Plaza Lo Castillo</div></div></div>
+</aside><div class="page">
+<div class="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" title="Menú"><i class="ti ti-menu-2"></i></button>
+  <span class="tbtl" id="tbtl">Dashboard</span>
+  <input class="tbs" type="text" placeholder="Buscar local, arrendatario..." oninput="gSearch(this.value)">
+  <button class="ib" onclick="navTo('calendario',null)"><i class="ti ti-calendar"></i></button>
+  <button class="ib"><i class="ti ti-bell"></i><span class="nd"></span></button>
+  <button class="ib" onclick="exportar()"><i class="ti ti-file-export"></i></button>
+  <span class="cp coff" id="connPill">Sin BD</span>
+  <div class="av">AD</div>
+</div>
+<!-- INICIO -->
+<div class="sec on" id="sec-inicio"><div class="cnt">
+  <!-- Quick stats strip -->
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kc" style="background:var(--glt)"><i class="ti ti-building ki" style="color:var(--green)"></i>
+      <div class="kl" style="color:var(--gdk)"><i class="ti ti-building-store"></i>Ocupación</div>
+      <div class="kv" style="color:var(--gdk)" id="k-occ">—%</div>
+      <div class="ks" style="color:var(--gdk)" id="k-occs">Calculando...</div>
+    </div>
+    <div class="kc" style="background:var(--alt)"><i class="ti ti-receipt ki" style="color:var(--amber)"></i>
+      <div class="kl" style="color:var(--adk)"><i class="ti ti-alert-circle"></i>GC con alerta</div>
+      <div class="kv" style="color:var(--adk)" id="k-gcpct">—</div>
+      <div class="ks" style="color:var(--adk)" id="k-gcsub">Sin datos</div>
+    </div>
+    <div class="kc" style="background:var(--plt)"><i class="ti ti-tool ki" style="color:var(--purple)"></i>
+      <div class="kl" style="color:var(--pdk)"><i class="ti ti-alert-triangle"></i>Tickets abiertos</div>
+      <div class="kv" style="color:var(--pdk)" id="k-tickets">0</div>
+      <div class="ks" style="color:var(--pdk)" id="k-ticketss">Mantención + incidencias</div>
+    </div>
+    <div class="kc" style="background:var(--blt)"><i class="ti ti-calendar-event ki" style="color:var(--blue)"></i>
+      <div class="kl" style="color:var(--bdk)"><i class="ti ti-clock"></i>Próxima actividad</div>
+      <div class="kv" style="color:var(--bdk);font-size:17px;line-height:1.3" id="k-next">—</div>
+      <div class="ks" style="color:var(--bdk)" id="k-nexts">Sin eventos próximos</div>
+    </div>
+  </div>
+
+  <!-- Mapa de locales — protagonista -->
+  <div class="card hero-map-wrap">
+    <div class="ch">
+      <span class="ct" style="font-size:17px"><i class="ti ti-map-2" style="margin-right:6px;color:var(--blue)"></i>Mapa de Locales</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="bprim" onclick="navTo('locales',null)">Vista completa <i class="ti ti-arrow-right"></i></button>
+      </div>
+    </div>
+    <div class="lfloor" id="homeMapGrid" style="gap:4px"></div>
+    <div class="leg" style="margin-top:12px">
+      <div class="li"><div class="ld" style="background:#1D9E75"></div>Ocupado · GC al día</div>
+      <div class="li"><div class="ld" style="background:#EF9F27"></div>GC pendiente</div>
+      <div class="li"><div class="ld" style="background:#9B9990"></div>Desocupado</div>
+      <div class="li"><div class="ld" style="background:#E24B4A"></div>Cerrado</div>
+      <div class="li"><div class="ld" style="background:#185FA5"></div>Unido con otro</div>
+      <div class="li" style="margin-left:auto;color:var(--tx2);font-style:italic">Hover = info · Clic = editar</div>
+    </div>
+  </div>
+
+  <!-- Agenda → Gantt ejecutivo -->
+  <div class="g2">
+    <div class="card" style="grid-column:span 1">
+      <div class="ch"><span class="ct" id="miniCalTitle">Agenda</span><button class="bprim" style="font-size:12px;padding:7px 13px" onclick="navTo('calendario',null)">Ver calendario completo</button></div>
+      <div id="miniCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Semáforo de cobranza GC</span><button class="bprim" style="font-size:12px;padding:7px 13px" onclick="navTo('locales',null)">Ver locales</button></div>
+      <div id="sem-quick"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <span class="ct" style="font-size:17px"><i class="ti ti-chart-bar" style="margin-right:6px;color:var(--blue)"></i>Cronograma del mes</span>
+      <button class="bprim" onclick="openModal('evento')"><i class="ti ti-plus"></i>Nueva actividad</button>
+    </div>
+    <div id="ganttHome"></div>
+  </div>
+</div></div>
+
+<!-- LOCALES -->
+<div class="sec" id="sec-locales" ondragover="event.preventDefault();document.getElementById('quickGcDropZone').style.display='block'" ondragleave="document.getElementById('quickGcDropZone').style.display='none'" ondrop="quickGcDrop(event)"><div class="cnt">
+  <div class="sec-hdr">
+    <div class="sec-title">Locales</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="tbs" style="width:220px" type="text" id="localSearch" placeholder="Buscar nº, nombre, rut, email..." oninput="buscarLocal(this.value)">
+      <button class="bsec" id="quickGcDropBtn" onclick="document.getElementById('quickGcInput').click()" title="Arrastra o sube el Excel de gastos comunes (exportado de Edifito)">
+        <i class="ti ti-file-upload"></i>Importar GC
+      </button>
+      <input type="file" id="quickGcInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="impHandleFile(this.files[0]);navTo('importar',document.querySelector('.ni[onclick*=importar]'))">
+      <button class="bprim" onclick="openModal('local')"><i class="ti ti-plus"></i>Nuevo local</button>
+    </div>
+  </div>
+  <div id="quickGcDropZone" style="display:none;border:2px dashed var(--blue);border-radius:var(--rl);padding:16px;text-align:center;background:var(--blt);margin-bottom:-6px;font-size:13px;color:var(--bdk);font-weight:600">
+    <i class="ti ti-cloud-upload" style="font-size:20px;vertical-align:-4px;margin-right:6px"></i>Suelta aquí el Excel de gastos comunes
+  </div>
+  <div class="card" id="searchPanel" style="display:none">
+    <div class="ch"><span class="ct" id="searchTitle">Resultados</span><button class="bsec" onclick="clearSearch()"><i class="ti ti-x"></i>Limpiar</button></div>
+    <div style="overflow-x:auto"><table class="dtbl"><thead><tr><th>Local</th><th>Nombre</th><th>Piso</th><th>Arrendatario</th><th>Email</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead><tbody id="searchBody"></tbody></table></div>
+  </div>
+  <div class="card" id="mapPanel">
+    <div class="lfloor" id="localMapGrid"></div>
+    <div class="leg" style="margin-top:10px">
+      <div class="li"><div class="ld" style="background:#1D9E75"></div>Ocupado / GC al día</div>
+      <div class="li"><div class="ld" style="background:#EF9F27"></div>GC pendiente</div>
+      <div class="li"><div class="ld" style="background:#9B9990"></div>Desocupado</div>
+      <div class="li"><div class="ld" style="background:#E24B4A"></div>Cerrado</div>
+      <div class="li"><div class="ld" style="background:#185FA5"></div>Unido con otro</div>
+      <div class="li" style="margin-left:auto;color:var(--tx2);font-style:italic;font-size:11px">Hover = info · Clic = editar</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- LOCATARIOS -->
+<div class="sec" id="sec-locatarios"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Locatarios</div><div style="display:flex;gap:8px"><input class="tbs" style="width:200px" type="text" placeholder="Buscar..." oninput="filterTbl('ltBody',this.value)"><button class="bprim" onclick="openModal('locatario')"><i class="ti ti-plus"></i>Nuevo</button></div></div>
+  <div class="card" style="overflow-x:auto"><table class="dtbl"><thead><tr><th>Nombre</th><th>RUT</th><th>Email</th><th>Teléfono</th><th></th></tr></thead><tbody id="ltBody"></tbody></table></div>
+</div></div>
+
+<!-- CONTRATOS -->
+<div class="sec" id="sec-contratos"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Contratos</div><button class="bprim" onclick="openModal('contrato')"><i class="ti ti-plus"></i>Nuevo contrato</button></div>
+  <div class="card">
+    <div class="ftabs" id="ctrTabs"><button class="ftab on" onclick="setCtrF('todos',this)">Todos</button><button class="ftab" onclick="setCtrF('activo',this)">Activos</button><button class="ftab" onclick="setCtrF('por_vencer',this)">Por vencer</button><button class="ftab" onclick="setCtrF('vencido',this)">Vencidos</button></div>
+    <div style="overflow-x:auto"><table class="dtbl"><thead><tr><th>Local</th><th>Arrendatario</th><th>Renta/mes</th><th>Inicio</th><th>Vence</th><th>Días rest.</th><th>Estado</th><th></th></tr></thead><tbody id="ctrBody"></tbody></table></div>
+  </div>
+</div></div>
+
+<!-- GASTOS COMUNES -->
+
+
+<!-- MANTENIMIENTO -->
+<div class="sec" id="sec-mantenimiento"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Mantenimiento</div><button class="bprim" onclick="openModal('mant')"><i class="ti ti-plus"></i>Nueva tarea</button></div>
+  <div class="g2">
+    <div class="card"><div class="ch"><span class="ct">Tareas activas</span></div><div id="mantBody"><div style="text-align:center;padding:20px;color:var(--tx1)">Sin tareas registradas</div></div></div>
+    <div class="card"><div class="ch"><span class="ct">Próximas</span></div><div class="tkr"><span>Sistema contra incendios</span><span style="color:var(--tx1)">30 may</span></div><div class="tkr"><span>Pintura pasillos</span><span style="color:var(--tx1)">15 jun</span></div><div class="tkr" style="border:none"><span>Fumigación general</span><span style="color:var(--tx1)">01 jul</span></div></div>
+  </div>
+</div></div>
+
+<!-- ESTACIONAMIENTO -->
+<div class="sec" id="sec-estacionamiento"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Estacionamiento — 64 espacios</div></div>
+  <div class="g2">
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div style="text-align:center;padding:10px;border-radius:var(--r);background:var(--glt)"><div style="font-size:22px;font-weight:700;color:var(--gdk)" id="pk-free">—</div><div style="font-size:12px;color:var(--gdk)">Libres</div></div>
+        <div style="text-align:center;padding:10px;border-radius:var(--r);background:var(--rlt)"><div style="font-size:22px;font-weight:700;color:var(--rdk)" id="pk-occ">—</div><div style="font-size:12px;color:var(--rdk)">Ocupados</div></div>
+        <div style="text-align:center;padding:10px;border-radius:var(--r);background:var(--blt)"><div style="font-size:22px;font-weight:700;color:var(--bdk)" id="pk-res">—</div><div style="font-size:12px;color:var(--bdk)">Reservados</div></div>
+      </div>
+      <div class="park-grid" id="parkGrid"></div>
+      <div class="leg" style="margin-top:10px"><div class="li"><div class="ld" style="background:#EAF3DE;border:.5px solid #5DCAA5"></div>Libre</div><div class="li"><div class="ld" style="background:#FCEBEB;border:.5px solid #F09595"></div>Ocupado</div><div class="li"><div class="ld" style="background:#E6F1FB;border:.5px solid #85B7EB"></div>Reservado</div></div>
+    </div>
+    <div class="card"><div class="ch"><span class="ct">Movimientos recientes</span></div><div class="tkr"><span style="color:var(--gdk)"><i class="ti ti-arrow-up-circle"></i> E-14 liberado</span><span style="color:var(--tx1)">10:38</span></div><div class="tkr"><span style="color:var(--rdk)"><i class="ti ti-arrow-down-circle"></i> E-07 ocupado</span><span style="color:var(--tx1)">10:35</span></div><div class="tkr" style="border:none"><span style="color:var(--bdk)"><i class="ti ti-bookmark"></i> E-31 reservado</span><span style="color:var(--tx1)">09:55</span></div></div>
+  </div>
+</div></div>
+
+<!-- INCIDENCIAS -->
+
+<!-- ══════════════ HORARIOS ══════════════ -->
+<div class="sec" id="sec-horarios"><div class="cnt">
+  <div class="sec-hdr">
+    <div class="sec-title">Horarios del personal</div>
+    <button class="bprim" onclick="openModal('staff')"><i class="ti ti-user-plus"></i>Agregar trabajador</button>
+  </div>
+  <div class="card">
+    <div class="ch">
+      <span class="ct">Turnos semanales</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <!-- Navegación de MESES -->
+        <div style="display:flex;gap:5px;align-items:center">
+          <button class="cal-nav" onclick="horPrevMes()" title="Mes anterior"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:13px;font-weight:700;min-width:120px;text-align:center" id="horMesLabel">—</span>
+          <button class="cal-nav" onclick="horNextMes()" title="Mes siguiente"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        
+        <!-- Navegación de SEMANAS (NUEVO) -->
+        <div style="display:flex;gap:5px;align-items:center;border-left:1px solid var(--bd);padding-left:12px">
+          <button class="cal-nav" onclick="horPrevWeek()" title="Semana anterior"><i class="ti ti-arrow-left"></i></button>
+          <span style="font-size:12px;font-weight:700;min-width:90px;text-align:center;background:var(--bd);padding:3px 8px;border-radius:4px" id="horWeekLabel">Sem 1</span>
+          <button class="cal-nav" onclick="horNextWeek()" title="Semana siguiente"><i class="ti ti-arrow-right"></i></button>
+        </div>
+        
+        <button class="bsec" style="font-size:12px;padding:6px 10px" onclick="horHoy()">Hoy</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Clic en una celda para asignar o editar un turno. Las horas se calculan automáticamente.</div>
+    <div style="overflow-x:auto">
+      <table class="dtbl" style="min-width:760px">
+        <thead><tr>
+          <th style="min-width:160px">Trabajador</th>
+          <th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th><th>Dom</th>
+          <th style="background:var(--bd);font-weight:600">Horas/Sem</th>
+        </tr></thead>
+        <tbody id="horariosBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">Equipo</span></div>
+    <div id="staffList"></div>
+  </div>
+</div></div>
+
+<!-- CALENDARIO -->
+<div class="sec" id="sec-calendario"><div class="cnt">
+  <div class="sec-hdr">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="sec-title">Calendario</div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <button class="cal-nav" onclick="prevM()"><i class="ti ti-chevron-left"></i></button>
+        <span style="font-size:14px;font-weight:700;min-width:130px;text-align:center" id="calTitle">—</span>
+        <button class="cal-nav" onclick="nextM()"><i class="ti ti-chevron-left" style="transform:scaleX(-1)"></i></button>
+      </div>
+      <!-- Selectores de mes y año -->
+      <div style="display:flex;gap:6px">
+        <select class="fi" id="calMonth" style="width:110px" onchange="jumpToMonth()">
+          <option value="0">Enero</option>
+          <option value="1">Febrero</option>
+          <option value="2">Marzo</option>
+          <option value="3">Abril</option>
+          <option value="4">Mayo</option>
+          <option value="5">Junio</option>
+          <option value="6">Julio</option>
+          <option value="7">Agosto</option>
+          <option value="8">Septiembre</option>
+          <option value="9">Octubre</option>
+          <option value="10">Noviembre</option>
+          <option value="11">Diciembre</option>
+        </select>
+        <select class="fi" id="calYear" style="width:90px" onchange="jumpToMonth()">
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+      </div>
+    </div>
+    <button class="bprim" onclick="openModal('evento')"><i class="ti ti-plus"></i>Nuevo evento</button>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+      <div class="leg" style="margin-top:10px"><div class="li"><div class="ld" style="background:#EF9F27"></div>Mantención</div><div class="li"><div class="ld" style="background:#185FA5"></div>Contrato</div><div class="li"><div class="ld" style="background:#00A3A3"></div>Aviso locatario</div><div class="li"><div class="ld" style="background:#1D9E75"></div>Marketing</div><div class="li"><div class="ld" style="background:#7F77DD"></div>Reunión</div><div class="li"><div class="ld" style="background:#E24B4A"></div>Incidencia</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><div class="ch"><span class="ct">Detalle del día</span></div><div id="dayDetail" style="font-size:13px;color:var(--tx1);text-align:center;padding:14px 0">Selecciona un día</div></div>
+      <div class="card"><div class="ch"><span class="ct">Cronograma del mes</span></div><div id="ganttWrap" style="overflow-x:auto"></div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- VITÁCORA -->
+<div class="sec" id="sec-vitacora"><div class="cnt">
+  <div class="sec-hdr">
+    <div class="sec-title">Vitácora del edificio</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select class="fi" style="width:150px" id="vitMonth" onchange="renderVitacora()">
+        <option value="">Todos los meses</option>
+        <option value="2026-01">Enero 2026</option>
+        <option value="2026-02">Febrero 2026</option>
+        <option value="2026-03">Marzo 2026</option>
+        <option value="2026-04">Abril 2026</option>
+        <option value="2026-05">Mayo 2026</option>
+        <option value="2026-06">Junio 2026</option>
+        <option value="2026-07">Julio 2026</option>
+        <option value="2026-08">Agosto 2026</option>
+        <option value="2026-09">Septiembre 2026</option>
+        <option value="2026-10">Octubre 2026</option>
+        <option value="2026-11">Noviembre 2026</option>
+        <option value="2026-12">Diciembre 2026</option>
+      </select>
+      <select class="fi" style="width:170px" id="vitFilter" onchange="renderVitacora()">
+        <option value="todos">Todos los registros</option>
+        <option value="mantenimiento">Mantenimiento</option>
+        <option value="pago">Pagos GC</option>
+        <option value="reunion">Reuniones</option>
+        <option value="incidencia">Incidencias</option>
+        <option value="contrato">Contratos</option>
+        <option value="otro">Otro</option>
+      </select>
+      <button class="bprim" onclick="openModal('vitacora')"><i class="ti ti-plus"></i>Nueva entrada</button>
+    </div>
+  </div>
+  <div class="card"><div id="vitacoraList"></div></div>
+</div></div>
+
+<!-- REPORTES -->
+
+<!-- IMPORTAR -->
+<div class="sec" id="sec-importar"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Importar datos</div></div>
+
+  <!-- ▶ PASO 1: subir archivo -->
+  <div class="card" id="imp-upload">
+    <div class="ch"><span class="ct"><i class="ti ti-upload" style="margin-right:6px"></i>Subir archivo Excel o CSV</span></div>
+    <div style="font-size:13px;color:var(--tx1);margin-bottom:16px">
+      El sistema detecta automáticamente el tipo de archivo. Para la <strong>planilla de colilla de cobro G.C.</strong> (formato Plaza Lo Castillo con columnas UCO, Gasto común, Total MES, Total GGCC), sube el Excel directamente — sin configurar nada.
+    </div>
+    <div class="drop-zone" id="impDropZone" onclick="document.getElementById('impFileInput').click()" ondragover="impDragOver(event)" ondragleave="impDragLeave()" ondrop="impDrop(event)">
+      <i class="ti ti-cloud-upload"></i>
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">Arrastra tu archivo aquí</div>
+      <div style="font-size:13px;color:var(--tx1)">Excel (.xlsx/.xls) o CSV</div>
+      <button class="bprim" style="margin-top:14px" onclick="event.stopPropagation();document.getElementById('impFileInput').click()">
+        <i class="ti ti-folder-open"></i>Seleccionar archivo
+      </button>
+      <input type="file" id="impFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="impHandleFile(this.files[0])">
+    </div>
+  </div>
+
+  <!-- ▶ RESULTADO colilla de cobro -->
+  <div class="card" id="imp-colilla-result" style="display:none">
+    <div class="ch">
+      <span class="ct" id="imp-col-title">Colilla de cobro G.C.</span>
+      <button class="bsec" onclick="impReset()"><i class="ti ti-upload"></i>Subir otro archivo</button>
+    </div>
+    <div id="imp-colilla-body"></div>
+  </div>
+
+  <!-- ▶ Mapeo manual (solo para CSV genérico) -->
+  <div class="card" id="imp-mapping" style="display:none">
+    <div class="ch">
+      <span class="ct">Configurar columnas</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:13px;color:var(--tx1)">Tipo:</span>
+        <select class="map-sel" id="impType" style="width:160px" onchange="updateMapping()">
+          <option value="gc">Gastos comunes</option>
+          <option value="locales">Locales</option>
+          <option value="locatarios">Locatarios</option>
+          <option value="contratos">Contratos</option>
+        </select>
+        <button class="bsec" onclick="impReset()"><i class="ti ti-arrow-left"></i>Volver</button>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--tx1);margin-bottom:14px">Asigna cada campo del sistema a la columna de tu archivo.</div>
+    <div class="g2" style="align-items:start">
+      <div><div id="mappingGrid"></div></div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">Vista previa</div>
+        <div style="overflow-x:auto"><table class="pvw-tbl"><thead><tr id="pvwHead"></tr></thead><tbody id="pvwBody"></tbody></table></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--tx1)" id="pvwCount"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:.5px solid var(--bd)">
+      <button class="bprim" onclick="startImport()"><i class="ti ti-database-import"></i>Importar <span id="impCount">0</span> registros</button>
+    </div>
+  </div>
+
+  <!-- ▶ Progreso importación genérica -->
+  <div class="card" id="imp-progress" style="display:none">
+    <div class="ch"><span class="ct">Importando...</span></div>
+    <div class="imp-prog"><div class="imp-prog-f" id="impProgBar" style="width:0%"></div></div>
+    <div style="font-size:13px;color:var(--tx1);margin-bottom:12px" id="impStatus">Iniciando...</div>
+    <div id="impResults"></div>
+    <div style="margin-top:14px"><button class="bprim" onclick="impReset()"><i class="ti ti-upload"></i>Importar otro archivo</button></div>
+  </div>
+
+</div></div>
+
+<!-- VITÁCORA -->
+<div class="sec" id="sec-config"><div class="cnt">
+  <div class="sec-hdr"><div class="sec-title">Configuración</div></div>
+  <div class="g2">
+    <div class="card"><div class="ch"><span class="ct">Datos del edificio</span></div><div class="mbody">
+      <div class="fg"><label class="fl">Nombre</label><input class="fi" value="Plaza Lo Castillo"></div>
+      <div class="fg"><label class="fl">Dirección</label><input class="fi" value="Candelaria Goyenechea 3820, Vitacura"></div>
+      <button class="bprim" style="margin-top:8px"><i class="ti ti-check"></i>Guardar</button>
+    </div></div>
+    <div class="card"><div class="ch"><span class="ct">Supabase</span><span class="cp coff" id="cfgConn">Sin conexión</span></div><div class="mbody">
+      <div class="fg"><label class="fl">Project URL</label><input class="fi" id="cfg-url" value="https://uhvtrstaezrghxqejtse.supabase.co"></div>
+      <div class="fg"><label class="fl">Publishable Key</label><input class="fi" id="cfg-key" value="sb_publishable_FZr4jBHKuHXJjrglk2tLDA_zPmYiRqr"></div>
+      <button class="bprim" style="margin-top:8px" onclick="reconn()"><i class="ti ti-plug"></i>Conectar</button>
+      <button class="bsec" style="margin-top:6px" onclick="clearLS()"><i class="ti ti-trash"></i>Limpiar caché local</button>
+    </div></div>
+  </div>
+</div></div>
+
+<div style="padding:8px 20px;border-top:.5px solid var(--bd);background:var(--bg0);font-size:12px;color:var(--tx1);display:flex;justify-content:space-between;flex-shrink:0">
+  <span><i class="ti ti-circle-check" style="font-size:12px;color:var(--green);vertical-align:-1px"></i> CC Admin <strong>v5.0</strong> · 196 locales reales · Plaza Lo Castillo</span>
+  <span id="ft"></span>
+</div>
+</div></div>
+
+<div class="mbg" id="modal-local"><div class="mbox" style="width:520px">
+  <div class="mhdr"><span class="mtitle" id="mLocalTitle">Local</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('local')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="frow"><div class="fg"><label class="fl">ID Local</label><input class="fi" id="l-id" readonly style="color:var(--tx2)"></div><div class="fg"><label class="fl">Piso</label><select class="fi" id="l-piso"><option value="S-2">S-2 (Subterráneo 2)</option><option value="S-1">S-1 (Subterráneo 1)</option><option value="PB">Planta Baja</option><option value="P1">Piso 1</option><option value="P2">Piso 2</option></select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Nombre / Rubro</label><input class="fi" id="l-nombre" placeholder="Nombre del local"></div><div class="fg"><label class="fl">Categoría</label><input class="fi" id="l-cat" placeholder="Joyería, Moda..."></div></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Estado del local</label><select class="fi" id="l-estado">
+        <option value="paid">🟢 Ocupado — GC al día</option>
+        <option value="pending">🟡 Ocupado — GC pendiente</option>
+        <option value="vacant">⚪ Desocupado / Disponible</option>
+        <option value="closed">🔴 Cerrado</option>
+        <option value="united">🔵 Unido con otro local</option>
+      </select></div>
+      <div class="fg"><label class="fl">Renta mensual CLP</label><input class="fi" type="number" id="l-renta" placeholder="0"></div>
+    </div>
+    <div style="background:var(--blt);border-radius:var(--r);padding:12px;margin-top:4px">
+      <div style="font-size:14px;font-weight:700;color:var(--bdk);margin-bottom:10px"><i class="ti ti-building"></i> Dueño del local</div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Nombre</label><input class="fi" id="l-dueno" placeholder="Nombre o razón social"></div>
+      <div class="frow"><div class="fg"><label class="fl">RUT</label><input class="fi" id="l-rut" placeholder="12.345.678-9"></div><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="l-tel-due" placeholder="+56 9..."></div></div>
+      <div class="fg" style="margin-top:8px"><label class="fl">Email</label><input class="fi" type="email" id="l-email-due" placeholder="correo@ejemplo.com"></div>
+    </div>
+    <div style="background:var(--glt);border-radius:var(--r);padding:12px;margin-top:4px">
+      <div style="font-size:14px;font-weight:700;color:var(--gdk);margin-bottom:10px"><i class="ti ti-user"></i> Arrendatario (si distinto al dueño)</div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Nombre</label><input class="fi" id="l-arr" placeholder="Dejar vacío si el dueño usa el local"></div>
+      <div class="frow"><div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="l-email-arr" placeholder="correo@ejemplo.com"></div><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="l-tel-arr" placeholder="+56 9..."></div></div>
+    </div>
+    <div id="l-gc-badge" style="border-radius:var(--r);padding:12px 14px;margin-top:4px;display:flex;align-items:center;gap:12px"></div>
+    <div class="frow" style="margin-top:4px"><div class="fg"><label class="fl">Meses deuda GC</label><input class="fi" type="number" id="l-gcm" value="0" min="0" oninput="actualizarBadgeGC()"></div><div class="fg"><label class="fl">Monto deuda CLP</label><input class="fi" type="number" id="l-gca" placeholder="0" oninput="actualizarBadgeGC()"></div></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button type="button" class="bprim" style="flex:1;justify-content:center" onclick="verHistorialGC(document.getElementById('l-id').value)"><i class="ti ti-history"></i>Ver historial GC</button>
+    </div>
+    <div style="display:flex;gap:8px">
+
+    </div>
+    <div class="fa"><button class="bsec" onclick="closeModal('local')">Cancelar</button><button class="bprim" onclick="saveLocal()"><i class="ti ti-check"></i>Guardar cambios</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-parking"><div class="mbox">
+  <div class="mhdr"><span class="mtitle" id="mParkTitle">Estacionamiento</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('parking')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="frow"><div class="fg"><label class="fl">Espacio</label><input class="fi" id="pk-num" readonly></div><div class="fg"><label class="fl">Estado</label><select class="fi" id="pk-estado"><option value="libre">Libre</option><option value="ocupado">Ocupado</option><option value="reservado">Reservado</option></select></div></div>
+    <div class="fg"><label class="fl">Propietario</label><input class="fi" id="pk-nombre" placeholder="Nombre"></div>
+    <div class="frow"><div class="fg"><label class="fl">Email</label><input class="fi" id="pk-email" placeholder="correo@ejemplo.com"></div><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="pk-tel" placeholder="+56 9..."></div></div>
+    <div class="fg"><label class="fl">Local asociado</label><input class="fi" id="pk-local" placeholder="LOC-101 (opcional)"></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('parking')">Cancelar</button><button class="bprim" onclick="saveParking()"><i class="ti ti-check"></i>Guardar</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-locatario"><div class="mbox">
+  <div class="mhdr"><span class="mtitle">Nuevo locatario</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('locatario')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="fg"><label class="fl">Nombre *</label><input class="fi" id="lt-n" placeholder="Nombre o razón social"></div>
+    <div class="frow"><div class="fg"><label class="fl">RUT</label><input class="fi" id="lt-r" placeholder="12.345.678-9"></div><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="lt-t" placeholder="+56 9..."></div></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="lt-e" placeholder="correo@ejemplo.com"></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('locatario')">Cancelar</button><button class="bprim" onclick="saveLt()"><i class="ti ti-check"></i>Guardar</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-contrato"><div class="mbox">
+  <div class="mhdr"><span class="mtitle">Nuevo contrato</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('contrato')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="frow"><div class="fg"><label class="fl">Local *</label><input class="fi" id="c-l" placeholder="LOC-101"></div><div class="fg"><label class="fl">Arrendatario *</label><input class="fi" id="c-a" placeholder="Nombre"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Fecha inicio *</label><input class="fi" type="date" id="c-i"></div><div class="fg"><label class="fl">Fecha fin *</label><input class="fi" type="date" id="c-f"></div></div>
+    <div class="fg"><label class="fl">Renta mensual CLP</label><input class="fi" type="number" id="c-r" placeholder="750000"></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('contrato')">Cancelar</button><button class="bprim" onclick="saveCtr()"><i class="ti ti-check"></i>Guardar</button></div>
+  </div>
+</div></div>
+
+
+
+<div class="mbg" id="modal-mant"><div class="mbox">
+  <div class="mhdr"><span class="mtitle">Nueva tarea de mantención</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('mant')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="fg"><label class="fl">Tarea *</label><input class="fi" id="m-t" placeholder="Ej: Revisión ascensor"></div>
+    <div class="frow"><div class="fg"><label class="fl">Estado</label><select class="fi" id="m-e"><option value="planificado">Planificado</option><option value="en_curso">En curso</option><option value="completado">Completado</option></select></div><div class="fg"><label class="fl">Fecha</label><input class="fi" type="date" id="m-f"></div></div>
+    <div class="fg"><label class="fl">Empresa / Responsable</label><input class="fi" id="m-em" placeholder="Nombre empresa"></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('mant')">Cancelar</button><button class="bprim" onclick="saveMant()"><i class="ti ti-check"></i>Guardar</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-evento"><div class="mbox">
+  <div class="mhdr"><span class="mtitle" id="mEvTitle">Nuevo evento</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('evento')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="fg"><label class="fl">Título *</label><input class="fi" id="ev-t" placeholder="Nombre del evento"></div>
+    <div class="fg"><label class="fl">Categoría</label><select class="fi" id="ev-c"><option value="mantenimiento">🔧 Mantenimiento</option><option value="contrato">📄 Contrato</option><option value="aviso">📣 Aviso de locatario</option><option value="marketing">📢 Marketing / Evento</option><option value="reunion">👥 Reunión</option><option value="incidencia">⚠️ Incidencia</option></select></div>
+    <div class="frow"><div class="fg"><label class="fl">Fecha inicio *</label><input class="fi" type="date" id="ev-i"></div><div class="fg"><label class="fl">Fecha fin *</label><input class="fi" type="date" id="ev-f"></div></div>
+    <div class="fg"><label class="fl">Notas</label><textarea class="fi" id="ev-n" rows="2" placeholder="Detalles, lugar, responsable..."></textarea></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('evento')">Cancelar</button><button class="bprim" onclick="saveEvt()"><i class="ti ti-check"></i>Guardar evento</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-vitacora"><div class="mbox">
+  <div class="mhdr"><span class="mtitle">Nueva entrada en Vitácora</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('vitacora')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <div class="frow"><div class="fg"><label class="fl">Fecha *</label><input class="fi" type="date" id="vit-fecha"></div><div class="fg"><label class="fl">Tipo *</label><select class="fi" id="vit-tipo"><option value="mantenimiento">🔧 Mantenimiento</option><option value="pago">💰 Pago / GC</option><option value="reunion">👥 Reunión</option><option value="incidencia">⚠️ Incidencia</option><option value="contrato">📄 Contrato</option><option value="inspeccion">🔍 Inspección</option><option value="otro">📝 Otro</option></select></div></div>
+    <div class="fg"><label class="fl">Descripción *</label><textarea class="fi" id="vit-desc" rows="3" placeholder="Describe lo ocurrido, realizado o acordado..."></textarea></div>
+    <div class="frow"><div class="fg"><label class="fl">Local</label><input class="fi" id="vit-local" placeholder="LOC-045 (opcional)"></div><div class="fg"><label class="fl">Responsable</label><input class="fi" id="vit-resp" placeholder="Nombre o empresa"></div></div>
+    <div class="fg"><label class="fl">Monto CLP (si aplica)</label><input class="fi" type="number" id="vit-monto" placeholder="0"></div>
+    <div class="fa"><button class="bsec" onclick="closeModal('vitacora')">Cancelar</button><button class="bprim" onclick="saveVitacora()"><i class="ti ti-check"></i>Guardar entrada</button></div>
+  </div>
+</div></div>
+
+<button class="ai-btn" onclick="toggleAI()" title="Asistente IA · Ctrl+K"><i class="ti ti-robot" style="font-size:24px;color:#fff"></i></button>
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-hdr"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;flex-shrink:0"><i class="ti ti-robot" style="font-size:16px;color:#fff"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">Asistente IA</div><div style="font-size:11px;color:rgba(255,255,255,.75)">Plaza Lo Castillo</div></div><button onclick="toggleAI()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:grid;place-items:center"><i class="ti ti-x"></i></button></div>
+  <div class="ai-msgs" id="aiMsgs"><div class="ai-msg bot">¡Hola! Soy el asistente de Plaza Lo Castillo. Puedo responderte preguntas sobre locales, gastos comunes, contratos e incidencias. ¿En qué te ayudo?</div></div>
+  <div class="ai-chips" id="aiChips"><button class="ai-chip" onclick="sendAIChip(this.textContent)">¿Cuántos locales tienen deuda?</button><button class="ai-chip" onclick="sendAIChip(this.textContent)">Locales vacantes</button><button class="ai-chip" onclick="sendAIChip(this.textContent)">Resumen del mes</button><button class="ai-chip" onclick="sendAIChip(this.textContent)">Incidencias abiertas</button></div>
+  <div class="ai-input-row"><input class="ai-input" id="aiInput" type="text" placeholder="Pregunta sobre el edificio..." onkeydown="if(event.key==='Enter')sendAI()"><button class="ai-send" onclick="sendAI()"><i class="ti ti-send"></i></button></div>
+</div>
+
+
+
+<div class="mbg" id="modal-gc-historial"><div class="mbox" style="width:600px">
+  <div class="mhdr"><span class="mtitle" id="gcHistTitle">Historial GC</span><button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('gc-historial')"><i class="ti ti-x"></i></button></div>
+  <div id="gcHistSummary" style="margin-bottom:14px"></div>
+  <div style="overflow-x:auto"><table class="dtbl"><thead><tr><th>Mes/Año</th><th>Monto cobrado</th><th>Meses atraso</th><th>Estado</th><th>Origen</th></tr></thead><tbody id="gcHistBody"></tbody></table></div>
+</div></div>
+
+
+
+<div class="mbg" id="modal-saldo"><div class="mbox" style="width:420px">
+  <div class="mhdr">
+    <span class="mtitle">Saldo acumulado en cuenta</span>
+    <button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('saldo')"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="mbody">
+    <div style="font-size:13px;color:var(--tx1);padding:10px;background:var(--bg1);border-radius:var(--r);margin-bottom:10px">
+      Ingresa el monto actual en la cuenta bancaria de gastos comunes. Los cobros importados se sumarán automáticamente a este saldo base.
+    </div>
+    <div class="fg"><label class="fl">Saldo actual en cuenta (CLP)</label>
+      <input class="fi" type="number" id="saldo-base" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    </div>
+    <div id="saldo-preview" style="margin-top:10px;padding:12px;background:var(--glt);border-radius:var(--r);display:none">
+      <div style="font-size:12px;color:var(--gdk);margin-bottom:4px">Total proyectado:</div>
+      <div style="font-size:20px;font-weight:700;color:var(--gdk)" id="saldo-total">—</div>
+      <div style="font-size:12px;color:var(--gdk)" id="saldo-detalle"></div>
+    </div>
+    <div class="fa">
+      <button class="bsec" onclick="closeModal('saldo')">Cancelar</button>
+      <button class="bprim" onclick="guardarSaldo()"><i class="ti ti-check"></i>Guardar</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- MODAL COBRO INDIVIDUAL -->
+
+
+<!-- MODAL PERSONAL -->
+
+
+<!-- MODAL LIQUIDACIÓN -->
+
+
+<!-- MODAL PRESUPUESTO ITEM -->
+
+
+<!-- MODAL GASTO REAL -->
+
+
+<!-- MODAL CONCILIACIÓN -->
+
+
+<div class="mbg" id="modal-staff"><div class="mbox">
+  <div class="mhdr"><span class="mtitle" id="mStaffTitle">Agregar trabajador</span>
+    <button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('staff')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <input type="hidden" id="staff-id">
+    <div class="fg"><label class="fl">Nombre completo *</label><input class="fi" id="staff-nombre" placeholder="Nombre Apellido"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Cargo</label><select class="fi" id="staff-cargo">
+        <option value="Conserje">Conserje</option>
+        <option value="Aseo">Aseo</option>
+        <option value="Seguridad">Seguridad</option>
+        <option value="Mantención">Mantención</option>
+        <option value="Administración">Administración</option>
+        <option value="Otro">Otro</option>
+      </select></div>
+      <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="staff-tel" placeholder="+56 9..."></div>
+    </div>
+    <div class="fa"><button class="bsec" onclick="closeModal('staff')">Cancelar</button>
+      <button class="bprim" onclick="guardarStaff()"><i class="ti ti-check"></i>Guardar</button></div>
+  </div>
+</div></div>
+
+<div class="mbg" id="modal-turno"><div class="mbox">
+  <div class="mhdr"><span class="mtitle" id="mTurnoTitle">Asignar turno</span>
+    <button style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx1)" onclick="closeModal('turno')"><i class="ti ti-x"></i></button></div>
+  <div class="mbody">
+    <input type="hidden" id="turno-id">
+    <input type="hidden" id="turno-personal-id">
+    <input type="hidden" id="turno-dia">
+    <div style="font-size:13px;color:var(--tx1);padding:8px 10px;background:var(--bg1);border-radius:var(--r)" id="turno-info"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Hora inicio</label><input class="fi" type="time" id="turno-inicio" value="09:00"></div>
+      <div class="fg"><label class="fl">Hora fin</label><input class="fi" type="time" id="turno-fin" value="18:00"></div>
+    </div>
+    <div class="fg"><label class="fl">Nota (opcional)</label><input class="fi" id="turno-nota" placeholder="Ej: Turno de reemplazo"></div>
+    <div class="fa">
+      <button class="bdng" id="turno-del-btn" style="margin-right:auto" onclick="eliminarTurno()"><i class="ti ti-trash"></i> Quitar turno</button>
+      <button class="bsec" onclick="closeModal('turno')">Cancelar</button>
+      <button class="bprim" onclick="guardarTurno()"><i class="ti ti-check"></i>Guardar</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- MÓDULOS REFACTORIZADOS v5.1.0 -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+
+<script src="modules/core.js"></script>
+<script src="modules/api.js"></script>
+<script src="modules/ui.js"></script>
+<script src="modules/horarios.js"></script>
+<script src="modules/vitacora.js"></script>
+
+<script>
+/**
+ * INICIALIZACIÓN - CC ADMIN v5.1.0
+ */
+document.addEventListener('DOMContentLoaded', async function() {
+  try {
+    console.log('🚀 Inicializando CC Admin v5.1.0');
+    
+    // Inicializar API
+    await APP.API.init();
+    
+    // Renderizar módulos
+    APP.Modules.Horarios.render();
+    APP.Modules.Vitacora.render();
+    
+    // Notificación
+    APP.UI.success('✅ Aplicación cargada');
+  } catch (error) {
+    console.error('Error:', error);
+    APP.UI.error('❌ Error: ' + error.message);
+  }
+});
+</script>
+
+</body>
+</html>
